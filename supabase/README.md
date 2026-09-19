@@ -1,6 +1,6 @@
 # Supabase
 
-Run `migrations/0001_sessions.sql` in the Supabase SQL editor (or with the Supabase CLI) to create the `sessions` table.
+Run the files in `migrations/` in order in the Supabase SQL editor (or with the Supabase CLI): `0001_sessions.sql` creates the `sessions` table and `0002_session_mode.sql` adds the text/voice `mode` column.
 
 Then set on the backend:
 

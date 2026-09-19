@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { HttpError } from "../lib/errors.js";
-import { createSession, debriefSession, getSession, sendLeaderMessage } from "../services/sessions.js";
-import { SessionSetupSchema } from "../types.js";
+import { createSession, debriefSession, getSession, sendLeaderMessage, setSessionMode } from "../services/sessions.js";
+import { SessionModeSchema, SessionSetupSchema } from "../types.js";
 
 export const sessionsRouter = Router();
 
@@ -10,12 +10,15 @@ const MessageBodySchema = z.object({
   content: z.string().trim().min(1, "Say something first.").max(4000),
 });
 
-/** POST /api/sessions — create a session from confirmed setup (assessments optional). */
+const ModeBodySchema = z.object({ mode: SessionModeSchema });
+
+/** POST /api/sessions — create a session from confirmed setup (assessments optional). Body may carry mode: "text" | "voice". */
 sessionsRouter.post("/", async (req, res, next) => {
   try {
     const parsed = SessionSetupSchema.safeParse(req.body);
     if (!parsed.success) throw new HttpError(400, "Invalid setup.", z.treeifyError(parsed.error));
-    const session = await createSession(parsed.data);
+    const mode = SessionModeSchema.safeParse(req.body?.mode);
+    const session = await createSession(parsed.data, mode.success ? mode.data : "text");
     res.status(201).json({ session });
   } catch (err) {
     next(err);
@@ -26,6 +29,18 @@ sessionsRouter.post("/", async (req, res, next) => {
 sessionsRouter.get("/:id", async (req, res, next) => {
   try {
     const session = await getSession(String(req.params.id));
+    res.json({ session });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** POST /api/sessions/:id/mode — switch between text and voice. The transcript carries over. */
+sessionsRouter.post("/:id/mode", async (req, res, next) => {
+  try {
+    const parsed = ModeBodySchema.safeParse(req.body);
+    if (!parsed.success) throw new HttpError(400, "Invalid mode.");
+    const session = await setSessionMode(String(req.params.id), parsed.data.mode);
     res.json({ session });
   } catch (err) {
     next(err);

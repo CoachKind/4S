@@ -5,15 +5,24 @@ import { Button, Card, ErrorNote, inputClass, Label, Spinner, Wordmark } from ".
 import { api, ApiError } from "../lib/api";
 import { conversationDirection, DIRECTION_LABELS, ROLE_LEVELS, simulatedTerm } from "../lib/roles";
 import { ScenarioIcon, scenarioTitle } from "../lib/scenarios";
-import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, RoleLevel, ScenarioId, SessionSetupInput, SetupOptions } from "../lib/types";
+import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, RoleLevel, ScenarioId, SessionMode, SessionSetupInput, SetupOptions } from "../lib/types";
 import { AssessmentReviewScreen } from "./AssessmentReviewScreen";
 
 interface Props {
   options: SetupOptions;
   starting: boolean;
   startError: string | null;
+  /** Pre-selected practice mode, e.g. "text" after a microphone was denied. */
+  initialMode?: SessionMode;
   onStart: (setup: SessionSetupInput) => void;
 }
+
+const MODES: Array<{ id: SessionMode; label: string; description: string }> = [
+  { id: "text", label: "Text", description: "Practice what to say. Type your side of the conversation." },
+  { id: "voice", label: "Voice", description: "Practice how to say it. Speak your side out loud." },
+];
+
+const VOICE_NOTE = "Voice mode uses your microphone. You'll be asked for permission when the conversation starts.";
 
 interface SlotState {
   assessment: Assessment | null;
@@ -62,7 +71,8 @@ function RoleSelector({
   );
 }
 
-export function SetupScreen({ options, starting, startError, onStart }: Props) {
+export function SetupScreen({ options, starting, startError, initialMode = "text", onStart }: Props) {
+  const [mode, setMode] = useState<SessionMode>(initialMode);
   const [userLevel, setUserLevel] = useState<RoleLevel | null>(null);
   const [simulatedLevel, setSimulatedLevel] = useState<RoleLevel | null>(null);
   const [simulatedName, setSimulatedName] = useState("");
@@ -112,6 +122,7 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
       difficulty,
       userAssessment: slots.user.assessment,
       simulatedAssessment: slots.simulated.assessment,
+      mode,
     });
   }
 
@@ -166,6 +177,28 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
                   {direction === "upward" && <p className="mt-1 text-xs text-muted">{UPWARD_NOTE}</p>}
                 </div>
               )}
+            </Card>
+
+            <Card className="p-5">
+              <h2 className="mb-1 font-serif text-xl text-ink">Practice mode</h2>
+              <p className="mb-4 text-xs text-muted">Text is for rehearsing what to say. Voice is for rehearsing how to say it.</p>
+              <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Practice mode">
+                {MODES.map((m) => (
+                  <label
+                    key={m.id}
+                    className={`block cursor-pointer rounded-lg border px-3.5 py-3 transition-colors ${
+                      mode === m.id ? "border-brand/60 bg-brand/5" : "border-surface-3 bg-surface-2 hover:border-surface-3/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input type="radio" name="mode" className="accent-brand" checked={mode === m.id} onChange={() => setMode(m.id)} />
+                      <span className="text-sm font-semibold text-ink">{m.label}</span>
+                    </div>
+                    <p className="mt-1 pl-6 text-xs leading-relaxed text-muted">{m.description}</p>
+                  </label>
+                ))}
+              </div>
+              {mode === "voice" && <p className="mt-3 text-xs text-muted">{VOICE_NOTE}</p>}
             </Card>
 
             <Card className="p-5">

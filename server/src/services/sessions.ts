@@ -1,6 +1,6 @@
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/ids.js";
-import type { Session, SessionSetup, TranscriptMessage } from "../types.js";
+import type { Session, SessionMode, SessionSetup, TranscriptMessage } from "../types.js";
 import { generateDebrief } from "./debrief.js";
 import { generateManagerReply } from "./simulation.js";
 import { getStore } from "./store.js";
@@ -18,11 +18,12 @@ async function withSessionLock<T>(id: string, fn: () => Promise<T>): Promise<T> 
   }
 }
 
-export async function createSession(setup: SessionSetup): Promise<Session> {
+export async function createSession(setup: SessionSetup, mode: SessionMode = "text"): Promise<Session> {
   const now = new Date().toISOString();
   const session: Session = {
     id: newId(),
     status: "active",
+    mode,
     setup,
     transcript: [],
     debrief: null,
@@ -74,13 +75,36 @@ export async function sendLeaderMessage(
   });
 }
 
+/** Switches an active session between text and voice. The transcript carries over. */
+export async function setSessionMode(id: string, mode: SessionMode): Promise<Session> {
+  return withSessionLock(id, async () => {
+    const session = await getSession(id);
+    if (session.status !== "active") throw new HttpError(409, "This session has already been debriefed.");
+    if (session.mode === mode) return session;
+    const updated: Session = { ...session, mode, updatedAt: new Date().toISOString() };
+    await getStore().update(updated);
+    return updated;
+  });
+}
+
+/** Replaces the transcript wholesale. Used by the voice relay, which owns turn order while connected. */
+export async function replaceTranscript(id: string, transcript: TranscriptMessage[]): Promise<Session> {
+  return withSessionLock(id, async () => {
+    const session = await getSession(id);
+    if (session.status !== "active") return session;
+    const updated: Session = { ...session, transcript, updatedAt: new Date().toISOString() };
+    await getStore().update(updated);
+    return updated;
+  });
+}
+
 /** Ends the conversation and generates the debrief. Idempotent once debriefed. */
 export async function debriefSession(id: string): Promise<Session> {
   return withSessionLock(id, async () => {
     const session = await getSession(id);
     if (session.status === "debriefed" && session.debrief) return session;
 
-    const debrief = await generateDebrief(session.setup, session.transcript);
+    const debrief = await generateDebrief(session.setup, session.transcript, session.mode);
     const updated: Session = {
       ...session,
       status: "debriefed",

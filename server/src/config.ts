@@ -15,6 +15,12 @@ export const config = {
     debrief: env("DEBRIEF_MODEL", "claude-opus-5")!,
     eqPrep: env("EQ_PREP_MODEL", "claude-opus-5")!,
   },
+  voice: {
+    openaiApiKey: env("OPENAI_API_KEY"),
+    voice: env("OPENAI_VOICE", "alloy")!,
+    model: env("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview")!,
+    url: env("OPENAI_REALTIME_URL", "wss://api.openai.com/v1/realtime")!,
+  },
   supabase: {
     url: env("SUPABASE_URL"),
     serviceRoleKey: env("SUPABASE_SERVICE_ROLE_KEY"),

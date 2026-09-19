@@ -1,5 +1,5 @@
 import { DIRECTION_DEBRIEF_SENTENCE, ROLE_LEVELS, type ConversationDirection } from "../roles.js";
-import type { Assessment, SessionSetup, TranscriptMessage } from "../types.js";
+import type { Assessment, SessionMode, SessionSetup, TranscriptMessage } from "../types.js";
 import { describeDisc } from "./persona.js";
 import { DIFFICULTIES, RESPONSE_STYLES, SCENARIOS, scenarioForDirection } from "./scenarios.js";
 
@@ -12,8 +12,11 @@ const DIRECTION_FOCUS: Record<ConversationDirection, string> = {
     "This was a LATERAL conversation: the user was speaking with a peer. Focus on whether the user communicated as a peer rather than with hierarchy, whether they stayed collaborative, and whether they named the issue without making it personal. Watch for turf, competitiveness, or pulling rank they do not have.",
 };
 
-/** The debrief system prompt is built per session so the role dynamic frames the coaching. */
-export function buildDebriefSystemPrompt(setup: SessionSetup): string {
+export const VOICE_DEBRIEF_LINE =
+  "This conversation happened in voice mode: the user spoke out loud rather than typing. In What to Sharpen, consider delivery, not just content, where the transcript gives clues: rushed responses, short answers that may indicate stress, or a pattern of long pauses before responding.";
+
+/** The debrief system prompt is built per session so the role dynamic (and mode) frames the coaching. */
+export function buildDebriefSystemPrompt(setup: SessionSetup, mode: SessionMode = "text"): string {
   const direction = setup.conversationDirection;
   const userLabel = ROLE_LEVELS[setup.userRole.level].label;
   const simulatedLabel = ROLE_LEVELS[setup.simulatedRole.level].label;
@@ -25,7 +28,9 @@ export function buildDebriefSystemPrompt(setup: SessionSetup): string {
 ${DIRECTION_FOCUS[direction]}
 
 SCENARIO LENS (${scenario.label}): ${scenario.debriefLens} Let these questions shape What Landed, What to Sharpen, and The Coaching Moment.
-
+${mode === "voice" ? `
+${VOICE_DEBRIEF_LINE}
+` : ""}
 Your debrief has four sections. Write each as short, plain-language paragraphs.
 
 WHAT LANDED: Begin this section with exactly this sentence, word for word: "${DIRECTION_DEBRIEF_SENTENCE[direction]}" Then give specific moments where the user handled the conversation well. Concrete, not generic. Quote or closely paraphrase what the user actually said and explain why it worked.

@@ -1,4 +1,4 @@
-import type { Assessment, Session, SessionSetupInput, SetupOptions, TranscriptMessage } from "./types";
+import type { Assessment, Session, SessionMode, SessionSetupInput, SetupOptions, TranscriptMessage } from "./types";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -73,6 +73,19 @@ export const api = {
       `/sessions/${id}/messages`,
       json("POST", { content }),
     ),
+
+  setMode: async (id: string, mode: SessionMode): Promise<Session> => {
+    const { session } = await request<{ session: Session }>(`/sessions/${id}/mode`, json("POST", { mode }));
+    return session;
+  },
+
+  /** WebSocket URL for the voice relay. Same host as the API, ws(s) scheme. */
+  voiceUrl: (id: string): string => {
+    const base = BASE || window.location.origin;
+    const url = new URL(`/voice/${encodeURIComponent(id)}/connect`, base);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    return url.toString();
+  },
 
   debrief: async (id: string): Promise<Session> => {
     const { session } = await request<{ session: Session }>(`/sessions/${id}/debrief`, json("POST"));

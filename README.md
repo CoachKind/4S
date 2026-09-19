@@ -22,8 +22,9 @@ TriMetrix DNA assessments are optional. Without them, the simulation runs on a b
 - [x] Emotional Check-In screen between setup and simulation, with a streamed EQ prep and strict no-storage privacy
 - [x] Role Dynamic System: three organizational levels, derived conversation direction, and direction-aware persona, check-in, banner, and debrief
 - [x] Four scenarios (Hard Feedback, Accountability, Re-engagement, Low Motivation) with a card selector, scenario-specific behavior, and a scenario debrief lens
+- [x] Voice mode: real-time spoken conversation through a server-side relay to the OpenAI Realtime API, sharing setup, check-in, persona, and debrief with text mode
 
-Remaining from Phases 2–4: session history, shareable debrief, voice mode, coach dashboard.
+Remaining from Phases 2–4: session history, shareable debrief, coach dashboard.
 
 ## Stack
 
@@ -32,6 +33,7 @@ Remaining from Phases 2–4: session history, shareable debrief, voice mode, coa
 | Frontend | React 19, Vite, Tailwind CSS v4, TypeScript |
 | Backend | Node 20+, Express 5, TypeScript |
 | AI | Anthropic Claude API via `@anthropic-ai/sdk`. `claude-sonnet-5` for extraction and simulation, `claude-opus-5` for the debrief |
+| Voice | OpenAI Realtime API over a raw WebSocket (`ws`), relayed by the server. `gpt-4o-realtime-preview`, voice `alloy` by default |
 | PDF parsing | Claude document input (base64 PDF) with structured JSON output |
 | Storage | Supabase (`sessions` table) when configured, otherwise in-memory |
 | Hosting | Vercel (client), Railway (server) |
@@ -42,14 +44,15 @@ API keys live only on the server.
 
 ```
 client/            Vite + React app
-  src/screens/     SetupScreen, AssessmentReviewScreen, EmotionalCheckInScreen, SimulationScreen, DebriefScreen
+  src/screens/     SetupScreen, AssessmentReviewScreen, EmotionalCheckInScreen, SimulationScreen, VoiceScreen, DebriefScreen
   src/components/  UI primitives, Header, AssessmentUpload
-  src/lib/         API client, types, labels, roles (mirror of server/src/roles.ts)
+  src/lib/         API client, types, labels, roles and scenarios (mirrors of the server), audio (capture/playback), voiceClient
 server/            Express API
   src/roles.ts     Role levels, conversation direction, and dynamic sentences
   src/prompts/     persona.ts (persona builder), debrief.ts, extraction.ts, eqPrep.ts, scenarios.ts
   src/services/    extraction, simulation, debrief, eqPrep, sessions, store (memory / Supabase), mock
   src/routes/      /api/assessments, /api/sessions, /api/eq-prep, /api/health, /api/meta/options
+  src/voice/       WebSocket relay (relay.ts), OpenAI and mock upstreams, transcript accumulator
   tests/           Prompt and helper tests (node:test)
 supabase/          SQL migration for the sessions table
 ```
@@ -72,7 +75,7 @@ Without an API key you can still exercise the whole UI with canned responses:
 MOCK_AI=1 npm run dev
 ```
 
-`MOCK_AI` is for development only. Any PDF returns a sample assessment and the manager replies from a fixed script.
+`MOCK_AI` is for development only. Any PDF returns a sample assessment, the simulated person replies from a fixed script, and voice mode runs against a mock relay that plays scripted turns after it hears about a second of audio.
 
 Other commands:
 
@@ -93,7 +96,10 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 | `SIMULATION_MODEL`, `EXTRACTION_MODEL`, `DEBRIEF_MODEL`, `EQ_PREP_MODEL` | no | Defaults: `claude-sonnet-5`, `claude-sonnet-5`, `claude-opus-5`, `claude-opus-5` |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | no | Both set → sessions persist to Supabase. Otherwise in-memory |
 | `CORS_ORIGINS` | no | Comma-separated browser origins. Default `http://localhost:5173` |
-| `MOCK_AI` | no | `1` enables canned AI responses (dev only) |
+| `OPENAI_API_KEY` | for voice | Server only. Without it, voice connections are refused with 503 and text mode keeps working |
+| `OPENAI_VOICE` | no | Default `alloy` |
+| `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_URL` | no | Defaults `gpt-4o-realtime-preview`, `wss://api.openai.com/v1/realtime` |
+| `MOCK_AI` | no | `1` enables canned AI responses and the mock voice relay (dev only) |
 | `VITE_API_BASE_URL` | no | Client build-time. Leave unset in dev; set to the Railway URL in production |
 
 ## API
@@ -108,6 +114,8 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 | `POST` | `/api/sessions/:id/messages` | `{ content }` → `{ leader, manager }` (the manager's reply) |
 | `POST` | `/api/sessions/:id/debrief` | Ends the conversation and returns the session with `debrief` |
 | `POST` | `/api/eq-prep` | `{ feeling }` → streamed plain-text EQ prep. Stateless; see Privacy below |
+| `POST` | `/api/sessions/:id/mode` | `{ mode: "text" \| "voice" }` → switches an active session; the transcript carries over |
+| `WS` | `/voice/:id/connect` | Voice relay. Rejects with 404 (no session), 409 (debriefed), 403 (origin), 503 (no key) before upgrading |
 
 ## Role Dynamic System
 
@@ -164,6 +172,16 @@ The session stores the scenario as an object: `{ id, label, description, title }
 **Debrief** (`server/src/prompts/debrief.ts`). The user's profile personalizes What to Sharpen and The Coaching Moment. The simulated person's profile explains why moments played out as they did. With both, the prompt asks for the dynamic between the two profiles.
 
 Assessment data is confirmed by the user before it is used. Prompts never contain the word the spec forbids; a test enforces this.
+
+## Voice mode
+
+Text mode is for rehearsing what to say; voice mode is for rehearsing how to say it. The setup screen has a Practice mode toggle (Text by default). Voice sessions share the setup, the Emotional Check-In, the persona, and the debrief with text mode. Only the conversation screen and the server relay are different.
+
+**Relay.** The browser opens a WebSocket to `/voice/:sessionId/connect`; the server opens one to the OpenAI Realtime API and relays between them. The OpenAI key never reaches the browser. On connect the server sends `session.update` with the persona prompt plus a spoken-conversation addition as `instructions`, the configured voice, pcm16 in and out, Whisper input transcription, and server-side voice activity detection. Any prior transcript is seeded into the model's context so a switch or reconnect keeps continuity. The browser may only send audio buffer events, cancel, and truncate; it can never change the session configuration.
+
+**Transcript.** Turns are placed when the service creates conversation items and filled in when `conversation.item.input_audio_transcription.completed` (user) and `response.audio_transcript.done` (simulated) arrive, so order follows speech even when the user's transcription lands after the reply starts. Each completed turn is pushed to the browser as `relay.transcript` and saved to the session; the transcript is saved again when the connection closes. The debrief reads it exactly as it reads a text transcript, and adds one line to its system prompt asking the coach to consider delivery.
+
+**Browser.** The screen asks for the microphone on load. Tap the circle once to connect; after that it is a state indicator (listening in Coach Kind yellow with expanding rings, thinking with a dark spinner, speaking with slow white rings), not push-to-talk. Audio is captured by an AudioWorklet at 24kHz mono PCM16 and played back by scheduling PCM chunks; when the user starts talking over a reply, playback stops immediately. "Switch to text mode" in the header ends the voice connection, saves what exists, and opens the text screen with the history loaded. A denied microphone shows a message and a button back to setup with Text pre-selected.
 
 ## Emotional Check-In and privacy
 

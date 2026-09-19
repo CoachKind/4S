@@ -82,6 +82,7 @@ export type SessionSetupInput = Omit<SessionSetup, "conversationDirection" | "us
   userRole: { level: RoleLevel };
   simulatedRole: { level: RoleLevel };
   scenario: ScenarioId;
+  mode: SessionMode;
 };
 
 /** "user" is the person practicing; "simulated" is the AI-played person. */
@@ -108,9 +109,13 @@ export interface Debrief {
 
 export type SessionStatus = "active" | "debriefed";
 
+/** How the conversation happens: typed, or spoken. */
+export type SessionMode = "text" | "voice";
+
 export interface Session {
   id: string;
   status: SessionStatus;
+  mode: SessionMode;
   setup: SessionSetup;
   transcript: TranscriptMessage[];
   debrief: Debrief | null;

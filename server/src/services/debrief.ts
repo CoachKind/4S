@@ -3,18 +3,18 @@ import { config } from "../config.js";
 import { getAnthropic } from "../lib/anthropic.js";
 import { HttpError } from "../lib/errors.js";
 import { buildDebriefSystemPrompt, buildDebriefUserPrompt } from "../prompts/debrief.js";
-import { DebriefSchema, type Debrief, type SessionSetup, type TranscriptMessage } from "../types.js";
+import { DebriefSchema, type Debrief, type SessionMode, type SessionSetup, type TranscriptMessage } from "../types.js";
 import { mockDebrief } from "./mock.js";
 
 /** Generates the four-section debrief from the transcript and any loaded assessments. */
-export async function generateDebrief(setup: SessionSetup, transcript: TranscriptMessage[]): Promise<Debrief> {
+export async function generateDebrief(setup: SessionSetup, transcript: TranscriptMessage[], mode: SessionMode = "text"): Promise<Debrief> {
   if (config.mockAi) return mockDebrief(setup, transcript);
   const client = getAnthropic();
 
   const response = await client.messages.parse({
     model: config.models.debrief,
     max_tokens: 16000,
-    system: buildDebriefSystemPrompt(setup),
+    system: buildDebriefSystemPrompt(setup, mode),
     messages: [{ role: "user", content: buildDebriefUserPrompt(setup, transcript) }],
     output_config: { format: zodOutputFormat(DebriefSchema) },
   });

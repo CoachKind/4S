@@ -31,6 +31,7 @@ class MemorySessionStore implements SessionStore {
 interface SessionRow {
   id: string;
   status: Session["status"];
+  mode: Session["mode"] | null;
   setup: Session["setup"];
   transcript: Session["transcript"];
   debrief: Session["debrief"];
@@ -42,6 +43,7 @@ function toRow(s: Session): SessionRow {
   return {
     id: s.id,
     status: s.status,
+    mode: s.mode,
     setup: s.setup,
     transcript: s.transcript,
     debrief: s.debrief,
@@ -54,6 +56,7 @@ function fromRow(r: SessionRow): Session {
   return {
     id: r.id,
     status: r.status,
+    mode: r.mode ?? "text",
     setup: r.setup,
     transcript: r.transcript ?? [],
     debrief: r.debrief ?? null,

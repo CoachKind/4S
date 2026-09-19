@@ -135,9 +135,14 @@ export type Debrief = z.infer<typeof DebriefSchema>;
 
 export type SessionStatus = "active" | "debriefed";
 
+/** How the conversation happens: typed, or spoken through the voice relay. */
+export const SessionModeSchema = z.enum(["text", "voice"]);
+export type SessionMode = z.infer<typeof SessionModeSchema>;
+
 export interface Session {
   id: string;
   status: SessionStatus;
+  mode: SessionMode;
   setup: SessionSetup;
   transcript: TranscriptMessage[];
   debrief: Debrief | null;
