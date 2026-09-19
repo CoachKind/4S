@@ -85,7 +85,7 @@ export function AssessmentReviewScreen({ slot, assessment, onConfirm, onCancel }
       <main className="mx-auto max-w-4xl px-5 py-8">
         <div className="mb-6">
           <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-brand">
-            {slot === "leader" ? "Leader" : "Manager"} assessment
+            {slot === "user" ? "Your" : "Their"} assessment
           </p>
           <h1 className="font-serif text-3xl text-ink">Confirm what we read</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">

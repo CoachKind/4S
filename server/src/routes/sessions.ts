@@ -32,13 +32,13 @@ sessionsRouter.get("/:id", async (req, res, next) => {
   }
 });
 
-/** POST /api/sessions/:id/messages — leader speaks; returns the manager's reply. */
+/** POST /api/sessions/:id/messages — the user speaks; returns the simulated person's reply. */
 sessionsRouter.post("/:id/messages", async (req, res, next) => {
   try {
     const parsed = MessageBodySchema.safeParse(req.body);
     if (!parsed.success) throw new HttpError(400, "Invalid message.", z.treeifyError(parsed.error));
     const result = await sendLeaderMessage(String(req.params.id), parsed.data.content);
-    res.json({ leader: result.leader, manager: result.manager, status: result.session.status });
+    res.json({ user: result.user, simulated: result.simulated, status: result.session.status });
   } catch (err) {
     next(err);
   }

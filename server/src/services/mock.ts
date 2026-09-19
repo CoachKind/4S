@@ -1,3 +1,4 @@
+import { DIRECTION_DEBRIEF_SENTENCE } from "../roles.js";
 import type { Assessment, Debrief, SessionSetup, TranscriptMessage } from "../types.js";
 
 /**
@@ -48,18 +49,18 @@ const MOCK_REPLIES = [
   "Alright. I can commit to the weekly check-ins starting Monday. I'd like to revisit this in a month so we're both looking at the same picture.",
 ];
 
-export function mockManagerReply(_setup: SessionSetup, transcript: TranscriptMessage[]): string {
-  const turn = transcript.filter((m) => m.role === "leader").length - 1;
+export function mockSimulatedReply(_setup: SessionSetup, transcript: TranscriptMessage[]): string {
+  const turn = transcript.filter((m) => m.role === "user").length - 1;
   return MOCK_REPLIES[Math.min(Math.max(turn, 0), MOCK_REPLIES.length - 1)];
 }
 
 export function mockDebrief(setup: SessionSetup, transcript: TranscriptMessage[]): Debrief {
-  const name = setup.managerName;
-  const first = transcript.find((m) => m.role === "leader")?.content ?? "";
+  const name = setup.simulatedName;
+  const first = transcript.find((m) => m.role === "user")?.content ?? "";
   const opener = first ? `You opened with "${first.slice(0, 80)}${first.length > 80 ? "…" : ""}", which named the topic without hedging.` : `You ended before saying anything, so there is little to assess yet.`;
   return {
-    what_landed: `${opener} When ${name} asked what this meant for them, you stayed with the substance instead of retreating to reassurance. That kept the conversation about the pattern, not about ${name}'s feelings about the conversation.`,
-    what_to_sharpen: setup.leaderAssessment
+    what_landed: `${DIRECTION_DEBRIEF_SENTENCE[setup.conversationDirection]} ${opener} When ${name} asked what this meant for them, you stayed with the substance instead of retreating to reassurance. That kept the conversation about the pattern, not about ${name}'s feelings about the conversation.`,
+    what_to_sharpen: setup.userAssessment
       ? `Your profile suggests you move quickly to solutions. That showed up when ${name} raised capacity: you answered the objection rather than asking what was underneath it. With ${name}'s high D, the faster you argue, the harder they push. Slow down and ask one more question before you respond.`
       : `When ${name} raised capacity, you answered the objection rather than exploring it. One more genuine question there would have surfaced what ${name} was actually protecting, and given you something concrete to work with.`,
     coaching_moment: `Name the pattern once, clearly, then stop talking. ${name} needs a beat of silence to actually hear it. The silence is doing the work, not your next sentence.`,

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { conversationDirection, roleRef } from "./roles.js";
+export type { ConversationDirection, RoleLevel, RoleRef } from "./roles.js";
 
 // ---------- Assessment (TriMetrix DNA extraction) ----------
 
@@ -54,21 +56,44 @@ export type Difficulty = z.infer<typeof DifficultySchema>;
 export const ScenarioIdSchema = z.enum(["hard_feedback"]);
 export type ScenarioId = z.infer<typeof ScenarioIdSchema>;
 
-export const SessionSetupSchema = z.object({
-  managerName: z.string().trim().min(1, "Manager name is required").max(80),
-  scenario: ScenarioIdSchema,
-  situationContext: z.string().trim().max(4000).optional().default(""),
-  responseStyle: ResponseStyleSchema,
-  difficulty: DifficultySchema,
-  leaderAssessment: AssessmentSchema.nullable().optional().default(null),
-  managerAssessment: AssessmentSchema.nullable().optional().default(null),
-});
+export const RoleLevelSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+
+/** Clients send { level }; the server fills in the canonical label. */
+export const RoleRefInputSchema = z
+  .object({ level: RoleLevelSchema, label: z.string().optional() })
+  .transform(({ level }) => roleRef(level));
+
+export const ConversationDirectionSchema = z.enum(["downward", "upward", "lateral"]);
+
+export const SessionSetupSchema = z
+  .object({
+    /** The user's own level. */
+    userRole: RoleRefInputSchema,
+    /** The level of the person being simulated. */
+    simulatedRole: RoleRefInputSchema,
+    /** Name of the person being simulated. */
+    simulatedName: z.string().trim().min(1, "Their name is required").max(80),
+    scenario: ScenarioIdSchema,
+    situationContext: z.string().trim().max(4000).optional().default(""),
+    responseStyle: ResponseStyleSchema,
+    difficulty: DifficultySchema,
+    /** The user's own TriMetrix DNA assessment. Personalizes the debrief. */
+    userAssessment: AssessmentSchema.nullable().optional().default(null),
+    /** The simulated person's TriMetrix DNA assessment. Drives the persona. */
+    simulatedAssessment: AssessmentSchema.nullable().optional().default(null),
+  })
+  .transform((s) => ({
+    ...s,
+    /** Derived, never chosen by the client. */
+    conversationDirection: conversationDirection(s.userRole.level, s.simulatedRole.level),
+  }));
 
 export type SessionSetup = z.infer<typeof SessionSetupSchema>;
 
 // ---------- Transcript ----------
 
-export const MessageRoleSchema = z.enum(["leader", "manager"]);
+/** "user" is the person practicing; "simulated" is the AI-played person. */
+export const MessageRoleSchema = z.enum(["user", "simulated"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
 export interface TranscriptMessage {

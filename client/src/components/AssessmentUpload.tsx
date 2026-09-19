@@ -4,6 +4,8 @@ import { Button, Spinner, Tag } from "./ui";
 
 interface Props {
   slot: AssessmentSlot;
+  /** Lower-case description of the other person, e.g. "your manager", for slot copy. */
+  otherTerm: string;
   assessment: Assessment | null;
   busy: boolean;
   error: string | null;
@@ -14,21 +16,23 @@ interface Props {
   onSwap: () => void;
 }
 
-const COPY: Record<AssessmentSlot, { title: string; unlocks: string }> = {
-  leader: {
-    title: "Leader Assessment",
-    unlocks: "Your own TriMetrix DNA report. Unlocks a debrief personalized to your behavioral profile.",
-  },
-  manager: {
-    title: "Manager Assessment",
-    unlocks: "The manager's TriMetrix DNA report. Unlocks a simulation built from their real behavioral data.",
-  },
-};
+function copyFor(slot: AssessmentSlot, otherTerm: string): { title: string; unlocks: string } {
+  if (slot === "user") {
+    return {
+      title: "Your Assessment",
+      unlocks: "Your own TriMetrix DNA report. Unlocks a debrief personalized to your behavioral profile.",
+    };
+  }
+  return {
+    title: "Their Assessment",
+    unlocks: `The TriMetrix DNA report of ${otherTerm}. Unlocks a simulation built from their real behavioral data.`,
+  };
+}
 
-export function AssessmentUpload({ slot, assessment, busy, error, canSwap, onFile, onReview, onRemove, onSwap }: Props) {
+export function AssessmentUpload({ slot, otherTerm, assessment, busy, error, canSwap, onFile, onReview, onRemove, onSwap }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const copy = COPY[slot];
+  const copy = copyFor(slot, otherTerm);
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
@@ -83,7 +87,7 @@ export function AssessmentUpload({ slot, assessment, busy, error, canSwap, onFil
             </Button>
             {canSwap && (
               <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={onSwap}>
-                Use as {slot === "leader" ? "Manager" : "Leader"} instead
+                {slot === "user" ? "This is theirs, not mine" : "This is mine, not theirs"}
               </Button>
             )}
             <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={onRemove}>

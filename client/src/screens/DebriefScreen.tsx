@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Header } from "../components/Header";
 import { Button, Card, Tag } from "../components/ui";
-import { difficultyLabel, scenarioTitle, styleLabel } from "../lib/labels";
+import { difficultyLabel, styleLabel } from "../lib/labels";
+import { dynamicSentence, scenarioTitle } from "../lib/roles";
 import type { Debrief, Session, SetupOptions } from "../lib/types";
 
 interface Props {
@@ -54,7 +55,7 @@ export function DebriefScreen({ session, options, onRestart }: Props) {
     );
   }
 
-  const loaded = [setup.leaderAssessment && "Leader", setup.managerAssessment && "Manager"].filter(Boolean) as string[];
+  const loaded = [setup.userAssessment && "Your", setup.simulatedAssessment && "Their"].filter(Boolean) as string[];
 
   return (
     <div className="min-h-screen bg-base">
@@ -68,12 +69,13 @@ export function DebriefScreen({ session, options, onRestart }: Props) {
       <main className="mx-auto max-w-3xl px-5 py-10">
         <div className="mb-8">
           <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-brand">Debrief</p>
-          <h1 className="font-serif text-3xl text-ink sm:text-4xl">Your conversation with {setup.managerName}</h1>
+          <h1 className="font-serif text-3xl text-ink sm:text-4xl">Your conversation with {setup.simulatedName}</h1>
+          <p className="mt-2 text-sm text-muted">{dynamicSentence(setup.userRole.level, setup.simulatedRole.level)}</p>
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <Tag>{scenarioTitle(options, setup.scenario)}</Tag>
+            <Tag>{scenarioTitle(setup.scenario, setup.userRole.level, setup.simulatedRole.level)}</Tag>
             <Tag>{styleLabel(options, setup.responseStyle)}</Tag>
             <Tag>{difficultyLabel(options, setup.difficulty)}</Tag>
-            {loaded.length > 0 ? <Tag tone="brand">{loaded.join(" + ")} assessment{loaded.length > 1 ? "s" : ""} loaded</Tag> : <Tag>General coaching · no assessments</Tag>}
+            {loaded.length > 0 ? <Tag tone="brand">{loaded.length > 1 ? "Both assessments" : `${loaded[0]} assessment`} loaded</Tag> : <Tag>General coaching · no assessments</Tag>}
           </div>
         </div>
 
@@ -121,8 +123,8 @@ export function DebriefScreen({ session, options, onRestart }: Props) {
               {transcript.length === 0 && <p className="p-4 text-sm text-muted">The conversation ended before anything was said.</p>}
               {transcript.map((m) => (
                 <div key={m.id} className="grid gap-1 p-4 sm:grid-cols-[120px_1fr]">
-                  <div className={`text-xs font-semibold uppercase tracking-wider ${m.role === "leader" ? "text-brand" : "text-muted"}`}>
-                    {m.role === "leader" ? "You" : setup.managerName}
+                  <div className={`text-xs font-semibold uppercase tracking-wider ${m.role === "user" ? "text-brand" : "text-muted"}`}>
+                    {m.role === "user" ? "You" : setup.simulatedName}
                   </div>
                   <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{m.content}</p>
                 </div>

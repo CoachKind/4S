@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { Header } from "../components/Header";
 import { Button, ErrorNote, Spinner, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
-import { difficultyLabel, scenarioTitle, styleLabel } from "../lib/labels";
+import { difficultyLabel, styleLabel } from "../lib/labels";
+import { dynamicSentence, scenarioTitle } from "../lib/roles";
 import type { Session, SetupOptions, TranscriptMessage } from "../lib/types";
 
 interface Props {
@@ -11,13 +12,13 @@ interface Props {
   onDebriefed: (session: Session) => void;
 }
 
-function Bubble({ message, managerName }: { message: TranscriptMessage; managerName: string }) {
-  const isLeader = message.role === "leader";
+function Bubble({ message, otherName }: { message: TranscriptMessage; otherName: string }) {
+  const isLeader = message.role === "user";
   return (
     <div className={`flex ${isLeader ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[85%] sm:max-w-[70%] ${isLeader ? "text-right" : "text-left"}`}>
         <div className={`mb-1 text-[11px] font-medium uppercase tracking-wider ${isLeader ? "text-brand" : "text-muted"}`}>
-          {isLeader ? "You" : managerName}
+          {isLeader ? "You" : otherName}
         </div>
         <div
           className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-left text-[15px] leading-relaxed ${
@@ -31,12 +32,12 @@ function Bubble({ message, managerName }: { message: TranscriptMessage; managerN
   );
 }
 
-function Thinking({ managerName }: { managerName: string }) {
+function Thinking({ otherName }: { otherName: string }) {
   return (
     <div className="flex justify-start">
       <div>
-        <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted">{managerName}</div>
-        <div className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-md bg-surface-2 px-4 py-3.5" aria-label={`${managerName} is thinking`}>
+        <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted">{otherName}</div>
+        <div className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-md bg-surface-2 px-4 py-3.5" aria-label={`${otherName} is thinking`}>
           <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
           <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
           <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
@@ -48,6 +49,7 @@ function Thinking({ managerName }: { managerName: string }) {
 
 export function SimulationScreen({ session, options, onDebriefed }: Props) {
   const { setup } = session;
+  const otherName = setup.simulatedName;
   const [transcript, setTranscript] = useState<TranscriptMessage[]>(session.transcript);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -74,11 +76,11 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
     setError(null);
     setSending(true);
     setDraft("");
-    const optimistic: TranscriptMessage = { id: `local-${Date.now()}`, role: "leader", content, createdAt: new Date().toISOString() };
+    const optimistic: TranscriptMessage = { id: `local-${Date.now()}`, role: "user", content, createdAt: new Date().toISOString() };
     setTranscript((t) => [...t, optimistic]);
     try {
-      const { leader, manager } = await api.sendMessage(session.id, content);
-      setTranscript((t) => [...t.filter((m) => m.id !== optimistic.id), leader, manager]);
+      const { user, simulated } = await api.sendMessage(session.id, content);
+      setTranscript((t) => [...t.filter((m) => m.id !== optimistic.id), user, simulated]);
     } catch (err) {
       setTranscript((t) => t.filter((m) => m.id !== optimistic.id));
       setDraft(content);
@@ -117,7 +119,7 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
     }
   }
 
-  const loaded = [setup.leaderAssessment && "Leader", setup.managerAssessment && "Manager"].filter(Boolean) as string[];
+  const loaded = [setup.userAssessment && "Your", setup.simulatedAssessment && "Their"].filter(Boolean) as string[];
 
   return (
     <div className="flex h-screen flex-col bg-base">
@@ -140,8 +142,8 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="text-sm text-ink">
-              <span className="font-semibold">{scenarioTitle(options, setup.scenario)}</span>
-              <span className="text-muted"> · with {setup.managerName}</span>
+              <span className="font-semibold">{dynamicSentence(setup.userRole.level, setup.simulatedRole.level)}</span>
+              <span className="text-muted"> · {scenarioTitle(setup.scenario, setup.userRole.level, setup.simulatedRole.level)} · {otherName}</span>
             </div>
             {setup.situationContext && (
               <p className="mt-0.5 truncate text-xs text-muted" title={setup.situationContext}>
@@ -153,7 +155,7 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
             <Tag>{styleLabel(options, setup.responseStyle)}</Tag>
             <Tag>{difficultyLabel(options, setup.difficulty)}</Tag>
             {loaded.length > 0 ? (
-              <Tag tone="brand">{loaded.join(" + ")} assessment{loaded.length > 1 ? "s" : ""} loaded</Tag>
+              <Tag tone="brand">{loaded.length > 1 ? "Both assessments" : `${loaded[0]} assessment`} loaded</Tag>
             ) : (
               <Tag>No assessments · archetype mode</Tag>
             )}
@@ -166,14 +168,14 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
         <div className="mx-auto max-w-4xl space-y-5 px-5 py-6">
           {transcript.length === 0 && !sending && (
             <div className="rounded-xl border border-dashed border-surface-3 p-6 text-center">
-              <p className="font-serif text-xl text-ink">{setup.managerName} has just sat down.</p>
-              <p className="mt-2 text-sm text-muted">This is your meeting. Open the conversation however you would in real life.</p>
+              <p className="font-serif text-xl text-ink">{otherName} has just sat down.</p>
+              <p className="mt-2 text-sm text-muted">You asked for this time. Open the conversation however you would in real life.</p>
             </div>
           )}
           {transcript.map((m) => (
-            <Bubble key={m.id} message={m} managerName={setup.managerName} />
+            <Bubble key={m.id} message={m} otherName={otherName} />
           ))}
-          {sending && <Thinking managerName={setup.managerName} />}
+          {sending && <Thinking otherName={otherName} />}
           <div ref={endRef} />
         </div>
       </main>
@@ -183,7 +185,7 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
         <div className="mx-auto max-w-4xl px-5 py-4">
           <div className="mb-2 flex items-center justify-between">
             <span className={`text-xs font-medium ${leaderTurn ? "text-brand" : "text-muted"}`}>
-              {ending ? "Ending the conversation…" : sending ? `${setup.managerName} is responding…` : "Your turn"}
+              {ending ? "Ending the conversation…" : sending ? `${otherName} is responding…` : "Your turn"}
             </span>
             <span className="text-xs text-dim">Enter to send · Shift+Enter for a new line</span>
           </div>
@@ -209,7 +211,7 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
             <textarea
               ref={inputRef}
               className="min-h-[52px] max-h-48 flex-1 resize-y rounded-xl border border-surface-3 bg-surface-2 px-4 py-3 text-[15px] text-ink placeholder:text-dim focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-60"
-              placeholder={transcript.length === 0 ? `Open the conversation with ${setup.managerName}…` : "Say what you would say…"}
+              placeholder={transcript.length === 0 ? `Open the conversation with ${otherName}…` : "Say what you would say…"}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleKey}

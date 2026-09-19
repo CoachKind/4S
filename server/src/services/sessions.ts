@@ -38,18 +38,18 @@ export async function getSession(id: string): Promise<Session> {
   return session;
 }
 
-/** Appends the leader's message, generates the manager's reply, and persists both. */
+/** Appends the user's message, generates the simulated person's reply, and persists both. */
 export async function sendLeaderMessage(
   id: string,
   content: string,
-): Promise<{ leader: TranscriptMessage; manager: TranscriptMessage; session: Session }> {
+): Promise<{ user: TranscriptMessage; simulated: TranscriptMessage; session: Session }> {
   return withSessionLock(id, async () => {
     const session = await getSession(id);
     if (session.status !== "active") throw new HttpError(409, "This session has already been debriefed.");
 
     const leader: TranscriptMessage = {
       id: newId(),
-      role: "leader",
+      role: "user",
       content,
       createdAt: new Date().toISOString(),
     };
@@ -59,7 +59,7 @@ export async function sendLeaderMessage(
 
     const manager: TranscriptMessage = {
       id: newId(),
-      role: "manager",
+      role: "simulated",
       content: reply,
       createdAt: new Date().toISOString(),
     };
@@ -70,7 +70,7 @@ export async function sendLeaderMessage(
       updatedAt: manager.createdAt,
     };
     await getStore().update(updated);
-    return { leader, manager, session: updated };
+    return { user: leader, simulated: manager, session: updated };
   });
 }
 

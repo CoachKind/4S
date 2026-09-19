@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./lib/api";
 import { DEFAULT_OPTIONS } from "./lib/labels";
-import type { Session, SessionSetup, SetupOptions } from "./lib/types";
+import type { Session, SessionSetupInput, SetupOptions } from "./lib/types";
 import { DebriefScreen } from "./screens/DebriefScreen";
 import { EmotionalCheckInScreen } from "./screens/EmotionalCheckInScreen";
 import { SetupScreen } from "./screens/SetupScreen";
@@ -27,7 +27,7 @@ export function App() {
     api.options().then(setOptions).catch(() => undefined);
   }, []);
 
-  async function start(setup: SessionSetup) {
+  async function start(setup: SessionSetupInput) {
     setStarting(true);
     setStartError(null);
     try {
@@ -52,7 +52,8 @@ export function App() {
       return (
         <EmotionalCheckInScreen
           key={phase.session.id}
-          managerName={phase.session.setup.managerName}
+          otherName={phase.session.setup.simulatedName}
+          direction={phase.session.setup.conversationDirection}
           onContinue={() => setPhase({ name: "simulation", session: phase.session })}
         />
       );

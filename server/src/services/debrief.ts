@@ -2,7 +2,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { config } from "../config.js";
 import { getAnthropic } from "../lib/anthropic.js";
 import { HttpError } from "../lib/errors.js";
-import { buildDebriefUserPrompt, DEBRIEF_SYSTEM_PROMPT } from "../prompts/debrief.js";
+import { buildDebriefSystemPrompt, buildDebriefUserPrompt } from "../prompts/debrief.js";
 import { DebriefSchema, type Debrief, type SessionSetup, type TranscriptMessage } from "../types.js";
 import { mockDebrief } from "./mock.js";
 
@@ -14,7 +14,7 @@ export async function generateDebrief(setup: SessionSetup, transcript: Transcrip
   const response = await client.messages.parse({
     model: config.models.debrief,
     max_tokens: 16000,
-    system: DEBRIEF_SYSTEM_PROMPT,
+    system: buildDebriefSystemPrompt(setup),
     messages: [{ role: "user", content: buildDebriefUserPrompt(setup, transcript) }],
     output_config: { format: zodOutputFormat(DebriefSchema) },
   });

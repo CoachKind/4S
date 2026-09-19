@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Header } from "../components/Header";
 import { Button, ErrorNote, Spinner } from "../components/ui";
 import { ApiError, streamEqPrep } from "../lib/api";
+import { CHECKIN_SUBTITLES } from "../lib/roles";
+import type { ConversationDirection } from "../lib/types";
 
 /**
  * Emotional Check-In. Sits between Setup and Simulation.
@@ -13,13 +15,15 @@ import { ApiError, streamEqPrep } from "../lib/api";
  */
 
 interface Props {
-  managerName: string;
+  /** Name of the person the user is about to speak with. */
+  otherName: string;
+  direction: ConversationDirection;
   onContinue: () => void;
 }
 
 const PRIVACY_LINE = "What you write here is used only to prepare you. It is never saved or stored.";
 
-export function EmotionalCheckInScreen({ managerName, onContinue }: Props) {
+export function EmotionalCheckInScreen({ otherName, direction, onContinue }: Props) {
   const [feeling, setFeeling] = useState("");
   const [prep, setPrep] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -77,11 +81,9 @@ export function EmotionalCheckInScreen({ managerName, onContinue }: Props) {
     <div className="min-h-screen bg-base">
       <Header />
       <main className="mx-auto max-w-2xl px-5 py-12 sm:py-16">
-        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-brand">Before the conversation with {managerName}</p>
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-brand">Before the conversation with {otherName}</p>
         <h1 className="font-serif text-4xl leading-tight text-ink sm:text-5xl">Before you go in</h1>
-        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
-          The way you feel about this conversation affects how you show up in it. Take a moment to check in with yourself before you start.
-        </p>
+        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">{CHECKIN_SUBTITLES[direction]}</p>
 
         <div className="mt-10">
           <label htmlFor="feeling" className="block text-[15px] font-semibold text-ink">
@@ -165,7 +167,7 @@ export function EmotionalCheckInScreen({ managerName, onContinue }: Props) {
             <Button onClick={leave} className="px-6 py-3 text-base">
               Start the simulation
             </Button>
-            <p className="text-xs text-dim">Read it once more if you need to. {managerName} will be there when you're ready.</p>
+            <p className="text-xs text-dim">Read it once more if you need to. {otherName} will be there when you're ready.</p>
           </div>
         )}
       </main>

@@ -8,7 +8,7 @@ process.env.MOCK_AI = "1";
 
 const { createApp } = await import("../src/app.ts");
 const { EQ_PREP_SYSTEM_PROMPT } = await import("../src/prompts/eqPrep.ts");
-const { DEBRIEF_SYSTEM_PROMPT, buildDebriefUserPrompt } = await import("../src/prompts/debrief.ts");
+const { buildDebriefSystemPrompt, buildDebriefUserPrompt } = await import("../src/prompts/debrief.ts");
 const { SessionSetupSchema } = await import("../src/types.ts");
 
 async function withServer<T>(fn: (base: string) => Promise<T>): Promise<T> {
@@ -62,7 +62,9 @@ test("POST /api/eq-prep rejects empty input without echoing anything back", asyn
 
 test("the session object and stores have no place for emotional check-in data", () => {
   const setup = SessionSetupSchema.parse({
-    managerName: "Marcus",
+    userRole: { level: 1 },
+    simulatedRole: { level: 2 },
+    simulatedName: "Marcus",
     scenario: "hard_feedback",
     responseStyle: "defensive",
     difficulty: "moderate",
@@ -75,7 +77,9 @@ test("the session object and stores have no place for emotional check-in data", 
 
 test("the debrief prompt has no channel for emotional check-in content", () => {
   const setup = SessionSetupSchema.parse({
-    managerName: "Marcus",
+    userRole: { level: 1 },
+    simulatedRole: { level: 2 },
+    simulatedName: "Marcus",
     scenario: "hard_feedback",
     responseStyle: "defensive",
     difficulty: "moderate",
@@ -83,7 +87,7 @@ test("the debrief prompt has no channel for emotional check-in content", () => {
   const prompt = buildDebriefUserPrompt(setup, []);
   for (const forbidden of [/check-?in/i, /how you feel/i, /emotional prep/i, /eq prep/i]) {
     assert.doesNotMatch(prompt, forbidden);
-    assert.doesNotMatch(DEBRIEF_SYSTEM_PROMPT, forbidden);
+    assert.doesNotMatch(buildDebriefSystemPrompt(setup), forbidden);
   }
 });
 

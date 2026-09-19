@@ -1,6 +1,6 @@
 # 4S — Safely Simulate Stressful Situations
 
-An AI-powered leadership training tool by **Coach Kind**. Leaders practice difficult conversations with a simulated manager on their team, then receive a personalized debrief.
+An AI-powered leadership training tool by **Coach Kind**. People practice difficult workplace conversations with a simulated colleague, in any direction (downward, upward, or lateral), then receive a personalized debrief.
 
 The loop: **set up the scenario → check in with yourself → have the conversation → get the debrief.**
 
@@ -20,6 +20,7 @@ TriMetrix DNA assessments are optional. Without them, the simulation runs on a b
 - [x] Debrief endpoint (transcript + assessments → four-section debrief)
 - [x] Debrief display with a visually distinct GAME Check
 - [x] Emotional Check-In screen between setup and simulation, with a streamed EQ prep and strict no-storage privacy
+- [x] Role Dynamic System: three organizational levels, derived conversation direction, and direction-aware persona, check-in, banner, and debrief
 
 Phases 2–4 (more scenarios, session history, shareable debrief, voice mode, coach dashboard) are not started.
 
@@ -42,8 +43,9 @@ API keys live only on the server.
 client/            Vite + React app
   src/screens/     SetupScreen, AssessmentReviewScreen, EmotionalCheckInScreen, SimulationScreen, DebriefScreen
   src/components/  UI primitives, Header, AssessmentUpload
-  src/lib/         API client, types, labels
+  src/lib/         API client, types, labels, roles (mirror of server/src/roles.ts)
 server/            Express API
+  src/roles.ts     Role levels, conversation direction, and dynamic sentences
   src/prompts/     persona.ts (persona builder), debrief.ts, extraction.ts, eqPrep.ts, scenarios.ts
   src/services/    extraction, simulation, debrief, eqPrep, sessions, store (memory / Supabase), mock
   src/routes/      /api/assessments, /api/sessions, /api/eq-prep, /api/health, /api/meta/options
@@ -106,17 +108,39 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 | `POST` | `/api/sessions/:id/debrief` | Ends the conversation and returns the session with `debrief` |
 | `POST` | `/api/eq-prep` | `{ feeling }` → streamed plain-text EQ prep. Stateless; see Privacy below |
 
+## Role Dynamic System
+
+The setup screen asks two questions before anything else: *You are a…* and *You are speaking with a…*, each one of three levels.
+
+| Level | Label | Short |
+|---|---|---|
+| 1 | Senior Leader / Executive | Senior Leader |
+| 2 | Manager | Manager |
+| 3 | Lead / Individual Contributor | Individual Contributor |
+
+The direction is derived, never chosen: a lower level number than the other person is **downward**, a higher number is **upward**, the same number is **lateral**. The session stores `userRole`, `simulatedRole` (each `{ level, label }`) and `conversationDirection` inside `setup`. The server fills in labels and direction itself and ignores any client-sent values for them.
+
+Direction changes the product end to end:
+
+- **Setup.** A direction line appears once both roles are chosen, with a note for upward conversations. The scenario title adapts ("…to a manager on your team", "…to your manager", "…to a peer").
+- **Persona.** `buildRoleDynamicSection` adds who the simulated person is at their level and how they experience this direction (a senior leader hearing upward feedback gets subtly patronizing; a manager hearing it from a report gets condescending; an individual contributor hearing it from an executive gets intimidated, and so on). Every prompt line that refers to the user uses a `{{USER}}` placeholder filled from the dynamic, so nothing assumes the user is senior.
+- **Emotional Check-In.** The subtitle changes by direction.
+- **Simulation banner.** "You're a Senior Leader speaking with a Manager on your team." / "You're an Individual Contributor speaking with a Senior Leader." / "You're a Manager speaking with a peer Manager."
+- **Debrief.** The system prompt carries a direction-specific coaching focus, and What Landed opens with the exact sentence for the direction ("This was an upward conversation — one of the hardest dynamics to navigate well.").
+
+Field names are role-neutral: `simulatedName`, `userAssessment`, `simulatedAssessment`, and transcript roles `user` / `simulated`.
+
 ## How assessments shape the output
 
-**Persona builder** (`server/src/prompts/persona.ts`). With a Manager assessment:
+**Persona builder** (`server/src/prompts/persona.ts`). With the simulated person's assessment:
 
 - Natural DISC scores of 60+ trigger the High D / I / S / C reaction patterns; 40 or below trigger the low-score patterns.
 - Primary Driving Forces matching Commanding, Altruistic, Instinctive, or Harmonious add "what they are protecting". Resourceful or Intellectual in the Indifferent group adds the "responds to feeling over evidence" pattern.
 - Bottom-5 competencies matching self-awareness, conflict management, or personal accountability add blindspots.
 - "Ways NOT to communicate" become explicit pressure points; "Ways to communicate" become what softens them.
-- The selected response style is layered on top as emotional tone. Without a Manager assessment, the response style is the archetype.
+- The selected response style is layered on top as emotional tone. Without an assessment for the simulated person, the response style is the archetype.
 
-**Debrief** (`server/src/prompts/debrief.ts`). The Leader profile personalizes What to Sharpen and The Coaching Moment. The Manager profile explains why moments played out as they did. With both, the prompt asks for the dynamic between the two profiles.
+**Debrief** (`server/src/prompts/debrief.ts`). The user's profile personalizes What to Sharpen and The Coaching Moment. The simulated person's profile explains why moments played out as they did. With both, the prompt asks for the dynamic between the two profiles.
 
 Assessment data is confirmed by the user before it is used. Prompts never contain the word the spec forbids; a test enforces this.
 
@@ -143,10 +167,11 @@ The field is optional. Moving on without a prep asks once ("Skip the check-in?")
 
 The build prompt asked for clarifying questions before application code. This was built autonomously, so the following calls were made and are easy to change:
 
-1. **The leader opens the conversation.** It is the leader's meeting; the manager does not speak first. The empty state says "Marcus has just sat down."
+1. **The user opens the conversation.** They asked for the time; the simulated person does not speak first. The empty state says "Marcus has just sat down."
 2. **DISC thresholds** are 60+ for high and 40 or below for low, on the natural style. Adapted scores are shown to the model but natural drives the reaction pattern under pressure.
-3. **Interchangeable slots** are implemented as a "Use as Leader/Manager instead" swap on each loaded slot, plus per-slot upload, review, and remove.
+3. **Interchangeable slots** are implemented as a "This is mine / This is theirs" swap on each loaded slot, plus per-slot upload, review, and remove.
 4. **Ending with no messages** asks for confirmation once, then produces an honest debrief about ending early.
 5. **Sessions are anonymous.** There is no auth until Phase 4. The Supabase table has RLS enabled with no policies, so only the service role key (server) can read it.
 6. **Session creation happens at the end of setup**, before the check-in. The check-in screen only gates entry to the simulation; it never reads or writes the session.
-7. **Debrief structure is enforced with structured output** (a JSON schema with the four sections), so the UI never has to parse prose. Length and "no bullets" are prompt constraints.
+7. **Same level is allowed and means lateral.** The role brief both forbade choosing the same level and defined lateral as the same level with a "peer Manager" example; lateral won, so no same-level validation error exists.
+8. **Debrief structure is enforced with structured output** (a JSON schema with the four sections), so the UI never has to parse prose. Length and "no bullets" are prompt constraints.

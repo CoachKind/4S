@@ -41,17 +41,41 @@ export type ResponseStyle = "defensive" | "deflecting" | "emotional" | "agreeabl
 export type Difficulty = "moderate" | "challenging" | "realistic";
 export type ScenarioId = "hard_feedback";
 
+export type RoleLevel = 1 | 2 | 3;
+export type ConversationDirection = "downward" | "upward" | "lateral";
+
+export interface RoleRef {
+  level: RoleLevel;
+  label: string;
+}
+
 export interface SessionSetup {
-  managerName: string;
+  /** The user's own level. */
+  userRole: RoleRef;
+  /** The level of the person being simulated. */
+  simulatedRole: RoleRef;
+  /** Derived on the server from the two levels. */
+  conversationDirection: ConversationDirection;
+  /** Name of the person being simulated. */
+  simulatedName: string;
   scenario: ScenarioId;
   situationContext: string;
   responseStyle: ResponseStyle;
   difficulty: Difficulty;
-  leaderAssessment: Assessment | null;
-  managerAssessment: Assessment | null;
+  /** The user's own assessment. Personalizes the debrief. */
+  userAssessment: Assessment | null;
+  /** The simulated person's assessment. Drives the persona. */
+  simulatedAssessment: Assessment | null;
 }
 
-export type MessageRole = "leader" | "manager";
+/** What the client sends to create a session; the server derives direction and labels. */
+export type SessionSetupInput = Omit<SessionSetup, "conversationDirection" | "userRole" | "simulatedRole"> & {
+  userRole: { level: RoleLevel };
+  simulatedRole: { level: RoleLevel };
+};
+
+/** "user" is the person practicing; "simulated" is the AI-played person. */
+export type MessageRole = "user" | "simulated";
 
 export interface TranscriptMessage {
   id: string;
@@ -85,9 +109,13 @@ export interface Session {
 }
 
 export interface SetupOptions {
+  roleLevels: Array<{ level: RoleLevel; label: string; short: string; description: string }>;
+  directions: Record<ConversationDirection, string>;
+  /** Base scenario titles; the dynamic-specific title comes from scenarioTitle(). */
   scenarios: Array<{ id: ScenarioId; title: string }>;
   responseStyles: Array<{ id: ResponseStyle; label: string; description: string }>;
   difficulties: Array<{ id: Difficulty; label: string; description: string }>;
 }
 
-export type AssessmentSlot = "leader" | "manager";
+/** "user" = the user's own report; "simulated" = the other person's report. */
+export type AssessmentSlot = "user" | "simulated";

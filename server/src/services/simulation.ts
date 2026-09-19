@@ -4,12 +4,12 @@ import { getAnthropic } from "../lib/anthropic.js";
 import { HttpError } from "../lib/errors.js";
 import { buildSimulationSystemPrompt } from "../prompts/persona.js";
 import type { SessionSetup, TranscriptMessage } from "../types.js";
-import { mockManagerReply } from "./mock.js";
+import { mockSimulatedReply } from "./mock.js";
 
-/** Leader messages are user turns; manager messages are assistant turns. */
+/** The user's messages are user turns; the simulated person's messages are assistant turns. */
 export function toMessageParams(transcript: TranscriptMessage[]): Anthropic.MessageParam[] {
   return transcript.map((m) => ({
-    role: m.role === "leader" ? "user" : "assistant",
+    role: m.role === "user" ? "user" : "assistant",
     content: m.content,
   }));
 }
@@ -28,15 +28,15 @@ export function cleanSpokenText(text: string): string {
   return t.replace(/[ \t]{2,}/g, " ").trim();
 }
 
-/** Generates the simulated manager's next reply given the full transcript so far. */
+/** Generates the simulated person's next reply given the full transcript so far. */
 export async function generateManagerReply(setup: SessionSetup, transcript: TranscriptMessage[]): Promise<string> {
-  if (config.mockAi) return mockManagerReply(setup, transcript);
+  if (config.mockAi) return mockSimulatedReply(setup, transcript);
   const client = getAnthropic();
   const system = buildSimulationSystemPrompt(setup);
   const messages = toMessageParams(transcript);
 
   if (messages.length === 0 || messages[0].role !== "user") {
-    throw new HttpError(400, "The leader opens the conversation.");
+    throw new HttpError(400, "You open the conversation.");
   }
 
   const response = await client.messages.create({

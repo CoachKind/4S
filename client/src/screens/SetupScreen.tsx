@@ -3,14 +3,15 @@ import { AssessmentUpload } from "../components/AssessmentUpload";
 import { Header } from "../components/Header";
 import { Button, Card, ErrorNote, inputClass, Label, Spinner, Wordmark } from "../components/ui";
 import { api, ApiError } from "../lib/api";
-import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, ScenarioId, SessionSetup, SetupOptions } from "../lib/types";
+import { conversationDirection, DIRECTION_LABELS, ROLE_LEVELS, scenarioTitle, simulatedTerm } from "../lib/roles";
+import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, RoleLevel, ScenarioId, SessionSetupInput, SetupOptions } from "../lib/types";
 import { AssessmentReviewScreen } from "./AssessmentReviewScreen";
 
 interface Props {
   options: SetupOptions;
   starting: boolean;
   startError: string | null;
-  onStart: (setup: SessionSetup) => void;
+  onStart: (setup: SessionSetupInput) => void;
 }
 
 interface SlotState {
@@ -21,14 +22,59 @@ interface SlotState {
 
 const emptySlot = (): SlotState => ({ assessment: null, busy: false, error: null });
 
+const UPWARD_NOTE = "You're practicing an upward conversation. These require a different approach — the simulation will reflect that.";
+
+function RoleSelector({
+  name,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  name: string;
+  label: string;
+  value: RoleLevel | null;
+  options: SetupOptions["roleLevels"];
+  onChange: (level: RoleLevel) => void;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="space-y-2">
+        {options.map((r) => (
+          <label
+            key={r.level}
+            className={`block cursor-pointer rounded-lg border px-3.5 py-3 transition-colors ${
+              value === r.level ? "border-brand/60 bg-brand/5" : "border-surface-3 bg-surface-2 hover:border-surface-3/80"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <input type="radio" name={name} className="accent-brand" checked={value === r.level} onChange={() => onChange(r.level)} />
+              <span className="text-sm font-semibold text-ink">{r.label}</span>
+              <span className="ml-auto whitespace-nowrap text-[11px] uppercase tracking-wider text-dim">Level {r.level}</span>
+            </div>
+            <p className="mt-1 pl-6 text-xs leading-relaxed text-muted">{r.description}</p>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SetupScreen({ options, starting, startError, onStart }: Props) {
-  const [managerName, setManagerName] = useState("");
+  const [userLevel, setUserLevel] = useState<RoleLevel | null>(null);
+  const [simulatedLevel, setSimulatedLevel] = useState<RoleLevel | null>(null);
+  const [simulatedName, setSimulatedName] = useState("");
   const [scenario, setScenario] = useState<ScenarioId>(options.scenarios[0]?.id ?? "hard_feedback");
   const [situationContext, setSituationContext] = useState("");
   const [responseStyle, setResponseStyle] = useState<ResponseStyle>("defensive");
   const [difficulty, setDifficulty] = useState<Difficulty>("moderate");
-  const [slots, setSlots] = useState<Record<AssessmentSlot, SlotState>>({ leader: emptySlot(), manager: emptySlot() });
+  const [slots, setSlots] = useState<Record<AssessmentSlot, SlotState>>({ user: emptySlot(), simulated: emptySlot() });
   const [reviewing, setReviewing] = useState<{ slot: AssessmentSlot; assessment: Assessment; fresh: boolean } | null>(null);
+
+  const direction = userLevel && simulatedLevel ? conversationDirection(userLevel, simulatedLevel) : null;
+  const otherTerm = userLevel && simulatedLevel ? simulatedTerm(userLevel, simulatedLevel) : "the person you're speaking with";
+  const otherShort = simulatedLevel ? ROLE_LEVELS[simulatedLevel].label : null;
 
   function patchSlot(slot: AssessmentSlot, patch: Partial<SlotState>) {
     setSlots((s) => ({ ...s, [slot]: { ...s[slot], ...patch } }));
@@ -46,22 +92,25 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
   }
 
   function swap() {
-    setSlots((s) => ({ leader: { ...s.manager }, manager: { ...s.leader } }));
+    setSlots((s) => ({ user: { ...s.simulated }, simulated: { ...s.user } }));
   }
 
-  const canSubmit = managerName.trim().length > 0 && !starting && !slots.leader.busy && !slots.manager.busy;
+  const canSubmit =
+    userLevel !== null && simulatedLevel !== null && simulatedName.trim().length > 0 && !starting && !slots.user.busy && !slots.simulated.busy;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || userLevel === null || simulatedLevel === null) return;
     onStart({
-      managerName: managerName.trim(),
+      userRole: { level: userLevel },
+      simulatedRole: { level: simulatedLevel },
+      simulatedName: simulatedName.trim(),
       scenario,
       situationContext: situationContext.trim(),
       responseStyle,
       difficulty,
-      leaderAssessment: slots.leader.assessment,
-      managerAssessment: slots.manager.assessment,
+      userAssessment: slots.user.assessment,
+      simulatedAssessment: slots.simulated.assessment,
     });
   }
 
@@ -82,6 +131,8 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
     );
   }
 
+  const nameLabel = otherShort ? `${otherShort}'s name` : "Their name";
+
   return (
     <div className="min-h-screen bg-base">
       <Header />
@@ -91,8 +142,8 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
           <div>
             <h1 className="font-serif text-3xl leading-tight text-ink sm:text-4xl">Safely Simulate Stressful Situations</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-              Practice a difficult conversation with a manager on your team before it happens for real. Set the scene,
-              have the conversation, and get a debrief on what landed and what to sharpen.
+              Practice a difficult conversation before it happens for real. Set the scene, have the conversation, and get a
+              debrief on what landed and what to sharpen.
             </p>
           </div>
         </div>
@@ -100,19 +151,39 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <Card className="p-5">
+              <h2 className="mb-1 font-serif text-xl text-ink">Who's in the room</h2>
+              <p className="mb-5 text-xs text-muted">Conversations run in every direction. Tell us where you each sit so the simulation reflects the real dynamic.</p>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <RoleSelector name="userLevel" label="You are a…" value={userLevel} options={options.roleLevels} onChange={setUserLevel} />
+                <RoleSelector name="simulatedLevel" label="You are speaking with a…" value={simulatedLevel} options={options.roleLevels} onChange={setSimulatedLevel} />
+              </div>
+
+              {direction && (
+                <div className="mt-5 rounded-lg border border-brand/40 bg-brand/5 px-3.5 py-3" aria-live="polite">
+                  <p className="text-sm font-semibold text-ink">{options.directions[direction] ?? DIRECTION_LABELS[direction]}</p>
+                  {direction === "upward" && <p className="mt-1 text-xs text-muted">{UPWARD_NOTE}</p>}
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-5">
               <h2 className="mb-1 font-serif text-xl text-ink">The conversation</h2>
-              <p className="mb-5 text-xs text-muted">You are a senior leader. The person you will speak with is a manager who leads their own team and reports to you.</p>
+              <p className="mb-5 text-xs text-muted">
+                {userLevel && simulatedLevel
+                  ? `You're speaking with ${otherTerm}.`
+                  : "Choose the two roles above to set up your conversation dynamic."}
+              </p>
 
               <div className="space-y-5">
                 <div>
-                  <Label>Manager's name</Label>
+                  <Label>{nameLabel}</Label>
                   <input
                     className={inputClass}
-                    value={managerName}
-                    onChange={(e) => setManagerName(e.target.value)}
+                    value={simulatedName}
+                    onChange={(e) => setSimulatedName(e.target.value)}
                     placeholder="e.g. Marcus"
                     maxLength={80}
-                    autoFocus
                     required
                   />
                 </div>
@@ -128,7 +199,7 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
                         }`}
                       >
                         <input type="radio" name="scenario" className="accent-brand" checked={scenario === s.id} onChange={() => setScenario(s.id)} />
-                        {s.title}
+                        {userLevel && simulatedLevel ? scenarioTitle(s.id, userLevel, simulatedLevel) : s.title}
                       </label>
                     ))}
                   </div>
@@ -149,7 +220,7 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
             </Card>
 
             <Card className="p-5">
-              <h2 className="mb-1 font-serif text-xl text-ink">How {managerName.trim() || "they"} will show up</h2>
+              <h2 className="mb-1 font-serif text-xl text-ink">How {simulatedName.trim() || "they"} will show up</h2>
               <p className="mb-5 text-xs text-muted">Response style shapes emotional tone, with or without an assessment. Difficulty shapes how hard you have to work.</p>
 
               <div className="grid gap-6 md:grid-cols-2">
@@ -200,17 +271,18 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
             <Card className="p-5">
               <h2 className="mb-1 font-serif text-xl text-ink">Assessments</h2>
               <p className="mb-4 text-xs leading-relaxed text-muted">
-                Uploading assessments builds a behaviorally accurate simulation based on real data. Without them, the simulation uses the style you select. Both are optional, and you choose which report goes in which slot.
+                Uploading assessments builds a behaviorally accurate simulation based on real data. Without them, the simulation uses the style you select. Both are optional, and you choose which report is yours and which is theirs.
               </p>
               <div className="space-y-3">
-                {(["leader", "manager"] as const).map((slot) => (
+                {(["user", "simulated"] as const).map((slot) => (
                   <AssessmentUpload
                     key={slot}
                     slot={slot}
+                    otherTerm={otherTerm}
                     assessment={slots[slot].assessment}
                     busy={slots[slot].busy}
                     error={slots[slot].error}
-                    canSwap={!slots.leader.busy && !slots.manager.busy}
+                    canSwap={!slots.user.busy && !slots.simulated.busy}
                     onFile={(file) => handleFile(slot, file)}
                     onReview={() => {
                       const a = slots[slot].assessment;
@@ -234,7 +306,11 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
                 "Start the conversation"
               )}
             </Button>
-            <p className="text-center text-xs text-dim">You open the conversation. End it whenever you're ready for the debrief.</p>
+            <p className="text-center text-xs text-dim">
+              {userLevel === null || simulatedLevel === null
+                ? "Choose both roles and a name to begin."
+                : "You open the conversation. End it whenever you're ready for the debrief."}
+            </p>
           </aside>
         </form>
       </main>

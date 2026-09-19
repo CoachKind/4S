@@ -1,4 +1,4 @@
-import type { Assessment, Session, SessionSetup, SetupOptions, TranscriptMessage } from "./types";
+import type { Assessment, Session, SessionSetupInput, SetupOptions, TranscriptMessage } from "./types";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -58,7 +58,7 @@ export const api = {
     return assessment;
   },
 
-  createSession: async (setup: SessionSetup): Promise<Session> => {
+  createSession: async (setup: SessionSetupInput): Promise<Session> => {
     const { session } = await request<{ session: Session }>("/sessions", json("POST", setup));
     return session;
   },
@@ -69,7 +69,7 @@ export const api = {
   },
 
   sendMessage: (id: string, content: string) =>
-    request<{ leader: TranscriptMessage; manager: TranscriptMessage }>(
+    request<{ user: TranscriptMessage; simulated: TranscriptMessage }>(
       `/sessions/${id}/messages`,
       json("POST", { content }),
     ),
