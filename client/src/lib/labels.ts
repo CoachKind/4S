@@ -1,11 +1,12 @@
 import { DIRECTION_LABELS, ROLE_LEVELS } from "./roles";
+import { SCENARIO_CARDS } from "./scenarios";
 import type { Difficulty, ResponseStyle, SetupOptions } from "./types";
 
 /** Fallback option lists used until /api/meta/options responds (or if it never does). */
 export const DEFAULT_OPTIONS: SetupOptions = {
   roleLevels: Object.values(ROLE_LEVELS),
   directions: DIRECTION_LABELS,
-  scenarios: [{ id: "hard_feedback", title: "Delivering hard feedback" }],
+  scenarios: SCENARIO_CARDS,
   responseStyles: [
     { id: "defensive", label: "Defensive", description: "Takes feedback personally, challenges observations, protects ego, pushes back firmly." },
     { id: "deflecting", label: "Deflecting", description: "Shifts blame to circumstances, team capacity, or unclear expectations while staying calm." },

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Header } from "../components/Header";
 import { Button, Card, Tag } from "../components/ui";
 import { difficultyLabel, styleLabel } from "../lib/labels";
-import { dynamicSentence, scenarioTitle } from "../lib/roles";
+import { dynamicSentence } from "../lib/roles";
 import type { Debrief, Session, SetupOptions } from "../lib/types";
 
 interface Props {
@@ -72,7 +72,7 @@ export function DebriefScreen({ session, options, onRestart }: Props) {
           <h1 className="font-serif text-3xl text-ink sm:text-4xl">Your conversation with {setup.simulatedName}</h1>
           <p className="mt-2 text-sm text-muted">{dynamicSentence(setup.userRole.level, setup.simulatedRole.level)}</p>
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <Tag>{scenarioTitle(setup.scenario, setup.userRole.level, setup.simulatedRole.level)}</Tag>
+            <Tag>{setup.scenario.title}</Tag>
             <Tag>{styleLabel(options, setup.responseStyle)}</Tag>
             <Tag>{difficultyLabel(options, setup.difficulty)}</Tag>
             {loaded.length > 0 ? <Tag tone="brand">{loaded.length > 1 ? "Both assessments" : `${loaded[0]} assessment`} loaded</Tag> : <Tag>General coaching · no assessments</Tag>}

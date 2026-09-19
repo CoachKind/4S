@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { conversationDirection, roleRef } from "./roles.js";
+import { scenarioRef } from "./scenarioRef.js";
 export type { ConversationDirection, RoleLevel, RoleRef } from "./roles.js";
 
 // ---------- Assessment (TriMetrix DNA extraction) ----------
@@ -53,7 +54,7 @@ export type ResponseStyle = z.infer<typeof ResponseStyleSchema>;
 export const DifficultySchema = z.enum(["moderate", "challenging", "realistic"]);
 export type Difficulty = z.infer<typeof DifficultySchema>;
 
-export const ScenarioIdSchema = z.enum(["hard_feedback"]);
+export const ScenarioIdSchema = z.enum(["hard_feedback", "accountability", "reengagement", "low_motivation"]);
 export type ScenarioId = z.infer<typeof ScenarioIdSchema>;
 
 export const RoleLevelSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
@@ -73,7 +74,8 @@ export const SessionSetupSchema = z
     simulatedRole: RoleRefInputSchema,
     /** Name of the person being simulated. */
     simulatedName: z.string().trim().min(1, "Their name is required").max(80),
-    scenario: ScenarioIdSchema,
+    /** Clients send the id (or { id }); the session carries the full scenario object. */
+    scenario: z.union([ScenarioIdSchema, z.object({ id: ScenarioIdSchema }).transform((o) => o.id)]),
     situationContext: z.string().trim().max(4000).optional().default(""),
     responseStyle: ResponseStyleSchema,
     difficulty: DifficultySchema,
@@ -84,9 +86,19 @@ export const SessionSetupSchema = z
   })
   .transform((s) => ({
     ...s,
+    scenario: scenarioRef(s.scenario, s.userRole.level, s.simulatedRole.level),
     /** Derived, never chosen by the client. */
     conversationDirection: conversationDirection(s.userRole.level, s.simulatedRole.level),
   }));
+
+/** The scenario as stored on the session: id plus the labels this dynamic renders. */
+export interface ScenarioRef {
+  id: ScenarioId;
+  label: string;
+  description: string;
+  /** Dynamic-specific title, e.g. "Delivering hard feedback to a peer". */
+  title: string;
+}
 
 export type SessionSetup = z.infer<typeof SessionSetupSchema>;
 

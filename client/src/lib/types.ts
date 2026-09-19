@@ -39,7 +39,16 @@ export interface Assessment {
 
 export type ResponseStyle = "defensive" | "deflecting" | "emotional" | "agreeable";
 export type Difficulty = "moderate" | "challenging" | "realistic";
-export type ScenarioId = "hard_feedback";
+export type ScenarioId = "hard_feedback" | "accountability" | "reengagement" | "low_motivation";
+
+/** The scenario as stored on the session. */
+export interface ScenarioRef {
+  id: ScenarioId;
+  label: string;
+  description: string;
+  /** Dynamic-specific title, e.g. "Delivering hard feedback to a peer". */
+  title: string;
+}
 
 export type RoleLevel = 1 | 2 | 3;
 export type ConversationDirection = "downward" | "upward" | "lateral";
@@ -58,7 +67,7 @@ export interface SessionSetup {
   conversationDirection: ConversationDirection;
   /** Name of the person being simulated. */
   simulatedName: string;
-  scenario: ScenarioId;
+  scenario: ScenarioRef;
   situationContext: string;
   responseStyle: ResponseStyle;
   difficulty: Difficulty;
@@ -69,9 +78,10 @@ export interface SessionSetup {
 }
 
 /** What the client sends to create a session; the server derives direction and labels. */
-export type SessionSetupInput = Omit<SessionSetup, "conversationDirection" | "userRole" | "simulatedRole"> & {
+export type SessionSetupInput = Omit<SessionSetup, "conversationDirection" | "userRole" | "simulatedRole" | "scenario"> & {
   userRole: { level: RoleLevel };
   simulatedRole: { level: RoleLevel };
+  scenario: ScenarioId;
 };
 
 /** "user" is the person practicing; "simulated" is the AI-played person. */
@@ -111,8 +121,8 @@ export interface Session {
 export interface SetupOptions {
   roleLevels: Array<{ level: RoleLevel; label: string; short: string; description: string }>;
   directions: Record<ConversationDirection, string>;
-  /** Base scenario titles; the dynamic-specific title comes from scenarioTitle(). */
-  scenarios: Array<{ id: ScenarioId; title: string }>;
+  /** Setup cards; the dynamic-specific title comes from scenarioTitle() in lib/scenarios. */
+  scenarios: Array<{ id: ScenarioId; label: string; description: string; placeholder: string; title: string }>;
   responseStyles: Array<{ id: ResponseStyle; label: string; description: string }>;
   difficulties: Array<{ id: Difficulty; label: string; description: string }>;
 }

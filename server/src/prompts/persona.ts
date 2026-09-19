@@ -286,7 +286,7 @@ export function buildSimulationSystemPrompt(setup: SessionSetup): string {
   const userLevel = setup.userRole.level;
   const simulatedLevel = setup.simulatedRole.level;
   const direction = setup.conversationDirection;
-  const scenario = scenarioForDirection(setup.scenario, userLevel, simulatedLevel);
+  const scenario = scenarioForDirection(setup.scenario.id, userLevel, simulatedLevel, setup.responseStyle);
   const style = RESPONSE_STYLES[setup.responseStyle];
   const difficulty = DIFFICULTIES[setup.difficulty];
   const name = setup.simulatedName;
@@ -301,6 +301,8 @@ export function buildSimulationSystemPrompt(setup: SessionSetup): string {
   sections.push(buildRoleDynamicSection(simulatedLevel, userLevel));
 
   sections.push(`SCENARIO: ${scenario.title}\n${scenario.simulatedFraming}`);
+
+  if (scenario.simulatedBehavior) sections.push(scenario.simulatedBehavior);
 
   if (setup.situationContext) {
     sections.push(

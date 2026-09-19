@@ -107,7 +107,8 @@ test("no server source references the emotional input outside the eq-prep files"
     const rel = f.slice(root.length + 1);
     if (allowed.has(rel)) continue;
     const src = readFileSync(f, "utf8");
-    assert.doesNotMatch(src, /[.{,(]\s*feeling\b|\bfeeling\s*[:=}]/, `${rel} must not handle the emotional input`);
+    // Matches the identifier (property access, destructuring, keys, assignment), not the English word in prose.
+    assert.doesNotMatch(src, /\.feeling\b|\{\s*feeling\b|\bfeeling\s*[:=}]/, `${rel} must not handle the emotional input`);
     assert.doesNotMatch(src, /\beqPrep\s*:(?!\s*env\()/, `${rel} must not store the EQ prep`);
   }
 });

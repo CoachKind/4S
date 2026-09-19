@@ -3,7 +3,8 @@ import { AssessmentUpload } from "../components/AssessmentUpload";
 import { Header } from "../components/Header";
 import { Button, Card, ErrorNote, inputClass, Label, Spinner, Wordmark } from "../components/ui";
 import { api, ApiError } from "../lib/api";
-import { conversationDirection, DIRECTION_LABELS, ROLE_LEVELS, scenarioTitle, simulatedTerm } from "../lib/roles";
+import { conversationDirection, DIRECTION_LABELS, ROLE_LEVELS, simulatedTerm } from "../lib/roles";
+import { ScenarioIcon, scenarioTitle } from "../lib/scenarios";
 import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, RoleLevel, ScenarioId, SessionSetupInput, SetupOptions } from "../lib/types";
 import { AssessmentReviewScreen } from "./AssessmentReviewScreen";
 
@@ -190,18 +191,30 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
 
                 <div>
                   <Label>Scenario</Label>
-                  <div className="space-y-2">
-                    {options.scenarios.map((s) => (
-                      <label
-                        key={s.id}
-                        className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-3 text-sm transition-colors ${
-                          scenario === s.id ? "border-brand/60 bg-brand/5 text-ink" : "border-surface-3 bg-surface-2 text-muted hover:text-ink"
-                        }`}
-                      >
-                        <input type="radio" name="scenario" className="accent-brand" checked={scenario === s.id} onChange={() => setScenario(s.id)} />
-                        {userLevel && simulatedLevel ? scenarioTitle(s.id, userLevel, simulatedLevel) : s.title}
-                      </label>
-                    ))}
+                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Scenario">
+                    {options.scenarios.map((s) => {
+                      const selected = scenario === s.id;
+                      return (
+                        <label
+                          key={s.id}
+                          className={`flex cursor-pointer gap-3 rounded-lg border px-3.5 py-3 transition-colors ${
+                            selected ? "border-brand bg-brand/5" : "border-surface-3 bg-surface-2 hover:border-surface-3/80"
+                          }`}
+                        >
+                          <input type="radio" name="scenario" className="sr-only" checked={selected} onChange={() => setScenario(s.id)} />
+                          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${selected ? "bg-brand text-base" : "bg-surface-3 text-muted"}`}>
+                            <ScenarioIcon id={s.id} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-ink">{s.label}</span>
+                            <span className="mt-1 block text-xs leading-relaxed text-muted">{s.description}</span>
+                            {userLevel && simulatedLevel && selected && (
+                              <span className="mt-1.5 block text-xs text-brand">{scenarioTitle(s.id, userLevel, simulatedLevel)}</span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -212,7 +225,7 @@ export function SetupScreen({ options, starting, startError, onStart }: Props) {
                     value={situationContext}
                     onChange={(e) => setSituationContext(e.target.value)}
                     maxLength={4000}
-                    placeholder="Marcus has been missing weekly check-ins and two of his direct reports have come to me separately in the last month. I've hinted at this before but never named it directly."
+                    placeholder={options.scenarios.find((s) => s.id === scenario)?.placeholder ?? ""}
                   />
                   <p className="mt-1.5 text-xs text-muted">What's been happening? Have you addressed this before? What's at stake? The more specific you are, the more realistic the simulation.</p>
                 </div>

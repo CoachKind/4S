@@ -3,7 +3,7 @@ import { Header } from "../components/Header";
 import { Button, ErrorNote, Spinner, Tag } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { difficultyLabel, styleLabel } from "../lib/labels";
-import { dynamicSentence, scenarioTitle } from "../lib/roles";
+import { dynamicSentence } from "../lib/roles";
 import type { Session, SetupOptions, TranscriptMessage } from "../lib/types";
 
 interface Props {
@@ -143,7 +143,7 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
           <div className="min-w-0">
             <div className="text-sm text-ink">
               <span className="font-semibold">{dynamicSentence(setup.userRole.level, setup.simulatedRole.level)}</span>
-              <span className="text-muted"> · {scenarioTitle(setup.scenario, setup.userRole.level, setup.simulatedRole.level)} · {otherName}</span>
+              <span className="text-muted"> · {setup.scenario.title} · {otherName}</span>
             </div>
             {setup.situationContext && (
               <p className="mt-0.5 truncate text-xs text-muted" title={setup.situationContext}>

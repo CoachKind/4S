@@ -1,5 +1,5 @@
 // Mirrors server/src/roles.ts. Kept in sync by hand.
-import type { ConversationDirection, RoleLevel, ScenarioId } from "./types";
+import type { ConversationDirection, RoleLevel } from "./types";
 
 export const ROLE_LEVELS: Record<RoleLevel, { level: RoleLevel; label: string; short: string; description: string }> = {
   1: { level: 1, label: "Senior Leader / Executive", short: "Senior Leader", description: "Carries organizational authority. Used to being deferred to." },
@@ -49,11 +49,4 @@ export function simulatedTerm(userLevel: RoleLevel, simulatedLevel: RoleLevel): 
   }
   if (simulatedLevel === 2) return "a manager on your team";
   return "a team member you lead";
-}
-
-export function scenarioTitle(id: ScenarioId, userLevel: RoleLevel, simulatedLevel: RoleLevel): string {
-  switch (id) {
-    case "hard_feedback":
-      return `Delivering hard feedback to ${simulatedTerm(userLevel, simulatedLevel)}`;
-  }
 }

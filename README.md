@@ -21,8 +21,9 @@ TriMetrix DNA assessments are optional. Without them, the simulation runs on a b
 - [x] Debrief display with a visually distinct GAME Check
 - [x] Emotional Check-In screen between setup and simulation, with a streamed EQ prep and strict no-storage privacy
 - [x] Role Dynamic System: three organizational levels, derived conversation direction, and direction-aware persona, check-in, banner, and debrief
+- [x] Four scenarios (Hard Feedback, Accountability, Re-engagement, Low Motivation) with a card selector, scenario-specific behavior, and a scenario debrief lens
 
-Phases 2–4 (more scenarios, session history, shareable debrief, voice mode, coach dashboard) are not started.
+Remaining from Phases 2–4: session history, shareable debrief, voice mode, coach dashboard.
 
 ## Stack
 
@@ -129,6 +130,26 @@ Direction changes the product end to end:
 - **Debrief.** The system prompt carries a direction-specific coaching focus, and What Landed opens with the exact sentence for the direction ("This was an upward conversation — one of the hardest dynamics to navigate well.").
 
 Field names are role-neutral: `simulatedName`, `userAssessment`, `simulatedAssessment`, and transcript roles `user` / `simulated`.
+
+## Scenarios
+
+Four scenarios, each available across every role dynamic. They are defined in one place, `server/src/prompts/scenarios.ts`, and each carries:
+
+- card copy (label, one-line description, situation-context placeholder)
+- a direction-aware title (for example "Re-engaging a manager on your team" downward, "Telling your manager you've pulled back" upward, "Checking in on a peer who's pulled back" lateral)
+- what the user is trying to do, per direction
+- what the simulated person walks in believing, per direction
+- how the simulated person behaves, per direction and response style (the persona's "HOW YOU BEHAVE IN THIS CONVERSATION" block)
+- a debrief lens, injected into the debrief system prompt as "SCENARIO LENS"
+
+| Scenario | Downward | Upward | Lateral |
+|---|---|---|---|
+| Hard Feedback | Unchanged from Phase 1 | The senior person is not used to feedback from this direction | Peers with their own turf |
+| Accountability | Excuse ready, pivots to now, hides the pattern | Dismissive: "let's not dwell on what didn't happen" | Feels called out, gets territorial |
+| Re-engagement | "I'm fine", real reason surfaces only with safety | The user is the one who has pulled back; the senior reacts by style | Less formal, more personal |
+| Low Motivation | Surprised it is visible; real cause underneath | The user is running on empty; the senior supports, solves, or dismisses | Delicate; not officially their lane |
+
+The session stores the scenario as an object: `{ id, label, description, title }`, with `title` already rendered for the dynamic. Clients send just the id.
 
 ## How assessments shape the output
 

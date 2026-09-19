@@ -1,7 +1,7 @@
 import { DIRECTION_DEBRIEF_SENTENCE, ROLE_LEVELS, type ConversationDirection } from "../roles.js";
 import type { Assessment, SessionSetup, TranscriptMessage } from "../types.js";
 import { describeDisc } from "./persona.js";
-import { DIFFICULTIES, RESPONSE_STYLES, scenarioForDirection } from "./scenarios.js";
+import { DIFFICULTIES, RESPONSE_STYLES, SCENARIOS, scenarioForDirection } from "./scenarios.js";
 
 const DIRECTION_FOCUS: Record<ConversationDirection, string> = {
   downward:
@@ -18,9 +18,13 @@ export function buildDebriefSystemPrompt(setup: SessionSetup): string {
   const userLabel = ROLE_LEVELS[setup.userRole.level].label;
   const simulatedLabel = ROLE_LEVELS[setup.simulatedRole.level].label;
 
-  return `You are a senior executive coach at Coach Kind writing a debrief for someone who has just finished a practice conversation with a simulated person from their organization. The user is a ${userLabel}. The person they spoke with is a ${simulatedLabel}.
+  const scenario = SCENARIOS[setup.scenario.id];
+
+  return `You are a senior executive coach at Coach Kind writing a debrief for someone who has just finished a practice conversation with a simulated person from their organization. The user is a ${userLabel}. The person they spoke with is a ${simulatedLabel}. The scenario was: ${setup.scenario.title}.
 
 ${DIRECTION_FOCUS[direction]}
+
+SCENARIO LENS (${scenario.label}): ${scenario.debriefLens} Let these questions shape What Landed, What to Sharpen, and The Coaching Moment.
 
 Your debrief has four sections. Write each as short, plain-language paragraphs.
 
@@ -81,7 +85,7 @@ export function formatTranscript(transcript: TranscriptMessage[], simulatedName:
 }
 
 export function buildDebriefUserPrompt(setup: SessionSetup, transcript: TranscriptMessage[]): string {
-  const scenario = scenarioForDirection(setup.scenario, setup.userRole.level, setup.simulatedRole.level);
+  const scenario = scenarioForDirection(setup.scenario.id, setup.userRole.level, setup.simulatedRole.level, setup.responseStyle);
   const name = setup.simulatedName;
   const parts: string[] = [];
 
