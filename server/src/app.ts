@@ -5,6 +5,7 @@ import multer from "multer";
 import { config } from "./config.js";
 import { HttpError } from "./lib/errors.js";
 import { assessmentsRouter } from "./routes/assessments.js";
+import { eqPrepRouter } from "./routes/eqPrep.js";
 import { metaRouter } from "./routes/meta.js";
 import { sessionsRouter } from "./routes/sessions.js";
 
@@ -25,6 +26,9 @@ export function createApp() {
   app.use("/api", metaRouter);
   app.use("/api/assessments", assessmentsRouter);
   app.use("/api/sessions", sessionsRouter);
+  // PRIVACY: /api/eq-prep carries sensitive emotional input. If request logging
+  // is ever added to this app, it must exclude this route's body entirely.
+  app.use("/api/eq-prep", eqPrepRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "Not found." });

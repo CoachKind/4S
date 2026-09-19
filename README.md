@@ -2,7 +2,7 @@
 
 An AI-powered leadership training tool by **Coach Kind**. Leaders practice difficult conversations with a simulated manager on their team, then receive a personalized debrief.
 
-The loop: **set up the scenario → have the conversation → get the debrief.**
+The loop: **set up the scenario → check in with yourself → have the conversation → get the debrief.**
 
 TriMetrix DNA assessments are optional. Without them, the simulation runs on a behavioral archetype. With a Manager assessment, the simulated manager is built from that person's real DISC, Driving Forces, competency gaps, and communication flags. With a Leader assessment, the debrief is personalized to the leader's own profile. With both, the debrief explains the dynamic between the two profiles.
 
@@ -19,6 +19,7 @@ TriMetrix DNA assessments are optional. Without them, the simulation runs on a b
 - [x] Text simulation interface with turn indicator, thinking state, context banner, always-visible End and Debrief
 - [x] Debrief endpoint (transcript + assessments → four-section debrief)
 - [x] Debrief display with a visually distinct GAME Check
+- [x] Emotional Check-In screen between setup and simulation, with a streamed EQ prep and strict no-storage privacy
 
 Phases 2–4 (more scenarios, session history, shareable debrief, voice mode, coach dashboard) are not started.
 
@@ -39,13 +40,13 @@ API keys live only on the server.
 
 ```
 client/            Vite + React app
-  src/screens/     SetupScreen, AssessmentReviewScreen, SimulationScreen, DebriefScreen
+  src/screens/     SetupScreen, AssessmentReviewScreen, EmotionalCheckInScreen, SimulationScreen, DebriefScreen
   src/components/  UI primitives, Header, AssessmentUpload
   src/lib/         API client, types, labels
 server/            Express API
-  src/prompts/     persona.ts (persona builder), debrief.ts, extraction.ts, scenarios.ts
-  src/services/    extraction, simulation, debrief, sessions, store (memory / Supabase), mock
-  src/routes/      /api/assessments, /api/sessions, /api/health, /api/meta/options
+  src/prompts/     persona.ts (persona builder), debrief.ts, extraction.ts, eqPrep.ts, scenarios.ts
+  src/services/    extraction, simulation, debrief, eqPrep, sessions, store (memory / Supabase), mock
+  src/routes/      /api/assessments, /api/sessions, /api/eq-prep, /api/health, /api/meta/options
   tests/           Prompt and helper tests (node:test)
 supabase/          SQL migration for the sessions table
 ```
@@ -86,7 +87,7 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 |---|---|---|
 | `ANTHROPIC_API_KEY` | yes | Server only |
 | `PORT` | no | Default 3001 |
-| `SIMULATION_MODEL`, `EXTRACTION_MODEL`, `DEBRIEF_MODEL` | no | Defaults: `claude-sonnet-5`, `claude-sonnet-5`, `claude-opus-5` |
+| `SIMULATION_MODEL`, `EXTRACTION_MODEL`, `DEBRIEF_MODEL`, `EQ_PREP_MODEL` | no | Defaults: `claude-sonnet-5`, `claude-sonnet-5`, `claude-opus-5`, `claude-opus-5` |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | no | Both set → sessions persist to Supabase. Otherwise in-memory |
 | `CORS_ORIGINS` | no | Comma-separated browser origins. Default `http://localhost:5173` |
 | `MOCK_AI` | no | `1` enables canned AI responses (dev only) |
@@ -103,6 +104,7 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 | `GET` | `/api/sessions/:id` | Fetch a session |
 | `POST` | `/api/sessions/:id/messages` | `{ content }` → `{ leader, manager }` (the manager's reply) |
 | `POST` | `/api/sessions/:id/debrief` | Ends the conversation and returns the session with `debrief` |
+| `POST` | `/api/eq-prep` | `{ feeling }` → streamed plain-text EQ prep. Stateless; see Privacy below |
 
 ## How assessments shape the output
 
@@ -117,6 +119,17 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 **Debrief** (`server/src/prompts/debrief.ts`). The Leader profile personalizes What to Sharpen and The Coaching Moment. The Manager profile explains why moments played out as they did. With both, the prompt asks for the dynamic between the two profiles.
 
 Assessment data is confirmed by the user before it is used. Prompts never contain the word the spec forbids; a test enforces this.
+
+## Emotional Check-In and privacy
+
+Between setup and the simulation, the leader is asked how the conversation or the person makes them feel going in, and gets a short EQ prep back. This is a private moment of preparation, not a data point, and the code enforces that at every layer:
+
+- **Server.** `POST /api/eq-prep` takes the text, makes one streaming model call, and returns the prep. It has no session id, touches no store, and returns validation errors without details so the input is never echoed. There is no request-body logging in the app; a comment on the route and in `app.ts` requires any future logging to exclude it.
+- **Session and debrief.** The session schema has no field for the check-in, so the API drops it if sent, and the debrief prompt is built only from the setup and transcript. Tests in `server/tests/eqPrep.test.ts` check both, and scan the rest of the server source for any handling of the input.
+- **Client.** The text and the prep live only in the check-in component's state. Nothing is written to `localStorage`, `sessionStorage`, or IndexedDB. State is cleared and any in-flight request aborted before the screen hands off to the simulation.
+- **UI.** The line "What you write here is used only to prepare you. It is never saved or stored." is always visible under the field.
+
+The field is optional. Moving on without a prep asks once ("Skip the check-in?") and then proceeds with nothing generated.
 
 ## Deployment
 
@@ -135,4 +148,5 @@ The build prompt asked for clarifying questions before application code. This wa
 3. **Interchangeable slots** are implemented as a "Use as Leader/Manager instead" swap on each loaded slot, plus per-slot upload, review, and remove.
 4. **Ending with no messages** asks for confirmation once, then produces an honest debrief about ending early.
 5. **Sessions are anonymous.** There is no auth until Phase 4. The Supabase table has RLS enabled with no policies, so only the service role key (server) can read it.
-6. **Debrief structure is enforced with structured output** (a JSON schema with the four sections), so the UI never has to parse prose. Length and "no bullets" are prompt constraints.
+6. **Session creation happens at the end of setup**, before the check-in. The check-in screen only gates entry to the simulation; it never reads or writes the session.
+7. **Debrief structure is enforced with structured output** (a JSON schema with the four sections), so the UI never has to parse prose. Length and "no bullets" are prompt constraints.

@@ -3,10 +3,17 @@ import { api, ApiError } from "./lib/api";
 import { DEFAULT_OPTIONS } from "./lib/labels";
 import type { Session, SessionSetup, SetupOptions } from "./lib/types";
 import { DebriefScreen } from "./screens/DebriefScreen";
+import { EmotionalCheckInScreen } from "./screens/EmotionalCheckInScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { SimulationScreen } from "./screens/SimulationScreen";
 
-type Phase = { name: "setup" } | { name: "simulation"; session: Session } | { name: "debrief"; session: Session };
+// Flow: setup -> checkin (Emotional Check-In, always shown) -> simulation -> debrief.
+// The check-in never touches the session; it only gates entry to the simulation.
+type Phase =
+  | { name: "setup" }
+  | { name: "checkin"; session: Session }
+  | { name: "simulation"; session: Session }
+  | { name: "debrief"; session: Session };
 
 export function App() {
   const [options, setOptions] = useState<SetupOptions>(DEFAULT_OPTIONS);
@@ -25,7 +32,7 @@ export function App() {
     setStartError(null);
     try {
       const session = await api.createSession(setup);
-      setPhase({ name: "simulation", session });
+      setPhase({ name: "checkin", session });
     } catch (err) {
       setStartError(err instanceof ApiError ? err.message : "Could not start the simulation.");
     } finally {
@@ -41,6 +48,14 @@ export function App() {
   switch (phase.name) {
     case "setup":
       return <SetupScreen key={setupKey} options={options} starting={starting} startError={startError} onStart={start} />;
+    case "checkin":
+      return (
+        <EmotionalCheckInScreen
+          key={phase.session.id}
+          managerName={phase.session.setup.managerName}
+          onContinue={() => setPhase({ name: "simulation", session: phase.session })}
+        />
+      );
     case "simulation":
       return (
         <SimulationScreen

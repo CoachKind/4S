@@ -79,3 +79,61 @@ export const api = {
     return session;
   },
 };
+
+/**
+ * Emotional Check-In.
+ *
+ * PRIVACY: `feeling` is sent once to /api/eq-prep and nowhere else. It is not
+ * stored anywhere on the client (no localStorage, sessionStorage, IndexedDB)
+ * and the server does not persist or log it. The prep streams back as plain
+ * text; `onChunk` receives each piece so the screen can render it as it arrives.
+ */
+export async function streamEqPrep(feeling: string, onChunk: (text: string) => void, signal?: AbortSignal): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/api/eq-prep`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feeling }),
+      signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    throw new ApiError(0, "Could not reach the 4S server. Is it running?");
+  }
+  if (!res.ok) {
+    let message = "The prep could not be generated. Please try again.";
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body?.error) message = body.error;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, message);
+  }
+  if (!res.body) throw new ApiError(502, "The server sent an empty response.");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const ERROR_MARK = "\u0000ERROR:";
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    // Hold back a partial error marker so it never renders; emit the rest.
+    const markIdx = buffer.indexOf(ERROR_MARK);
+    if (markIdx !== -1) {
+      const status = Number(buffer.slice(markIdx + ERROR_MARK.length).trim()) || 502;
+      const clean = buffer.slice(0, markIdx).replace(/\n$/, "");
+      if (clean) onChunk(clean);
+      throw new ApiError(status, "The prep could not be generated. Try saying it a different way.");
+    }
+    const safeLen = buffer.lastIndexOf("\u0000") === -1 ? buffer.length : buffer.lastIndexOf("\u0000");
+    if (safeLen > 0) {
+      onChunk(buffer.slice(0, safeLen));
+      buffer = buffer.slice(safeLen);
+    }
+  }
+  if (buffer) onChunk(buffer.replace(/\u0000.*$/s, ""));
+}

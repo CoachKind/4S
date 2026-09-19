@@ -13,6 +13,7 @@ export const config = {
     simulation: env("SIMULATION_MODEL", "claude-sonnet-5")!,
     extraction: env("EXTRACTION_MODEL", "claude-sonnet-5")!,
     debrief: env("DEBRIEF_MODEL", "claude-opus-5")!,
+    eqPrep: env("EQ_PREP_MODEL", "claude-opus-5")!,
   },
   supabase: {
     url: env("SUPABASE_URL"),
