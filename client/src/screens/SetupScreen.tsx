@@ -4,7 +4,8 @@ import { Header } from "../components/Header";
 import { Button, Card, ErrorNote, inputClass, Label, Spinner, Wordmark } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { conversationDirection, DIRECTION_LABELS, ROLE_LEVELS, simulatedTerm } from "../lib/roles";
-import { ScenarioIcon, scenarioTitle } from "../lib/scenarios";
+import { ScenarioIcon } from "../components/ScenarioIcon";
+import { scenarioTitle } from "../lib/scenarios";
 import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, RoleLevel, ScenarioId, SessionMode, SessionSetupInput, SetupOptions } from "../lib/types";
 import { AssessmentReviewScreen } from "./AssessmentReviewScreen";
 

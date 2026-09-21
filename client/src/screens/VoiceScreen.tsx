@@ -100,7 +100,8 @@ function VoiceCircle({ state, onTap }: { state: VoiceState; onTap: () => void })
 export function VoiceScreen({ session, options, onDebriefed, onSwitchToText, onMicDenied }: Props) {
   const { setup } = session;
   const otherName = setup.simulatedName;
-  const [mic, setMic] = useState<MicStatus>("asking");
+  // Decided once, up front: a browser with no getUserMedia can never grant the microphone.
+  const [mic, setMic] = useState<MicStatus>(() => (typeof navigator.mediaDevices?.getUserMedia === "function" ? "asking" : "denied"));
   const [state, setState] = useState<VoiceState>("idle");
   const [transcript, setTranscript] = useState<TranscriptMessage[]>(session.transcript);
   const [error, setError] = useState<string | null>(null);
@@ -114,10 +115,7 @@ export function VoiceScreen({ session, options, onDebriefed, onSwitchToText, onM
   // Ask for the microphone as soon as the screen loads.
   useEffect(() => {
     let cancelled = false;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setMic("denied");
-      return;
-    }
+    if (typeof navigator.mediaDevices?.getUserMedia !== "function") return;
     navigator.mediaDevices
       .getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false })
       .then((stream) => {

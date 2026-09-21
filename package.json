@@ -1,8 +1,9 @@
 {
   "name": "4s",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
-  "description": "4S — Safely Simulate Stressful Situations. AI-powered leadership conversation practice by Coach Kind.",
+  "description": "4S \u2014 Safely Simulate Stressful Situations. AI-powered leadership conversation practice by Coach Kind.",
   "workspaces": [
     "client",
     "server"
@@ -11,11 +12,24 @@
     "dev": "concurrently -n server,client -c yellow,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w server && npm run build -w client",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:words": "node scripts/check-forbidden-words.mjs",
     "test": "npm run test -w server",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run check:words && npm test",
     "start": "npm run start -w server"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.1.2",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.8",
+    "typescript-eslint": "^8.70.1"
   },
   "engines": {
     "node": ">=20"

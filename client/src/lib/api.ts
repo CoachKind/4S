@@ -20,7 +20,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(0, "Could not reach the 4S server. Is it running?");
   }
   const text = await res.text();
-  let body: unknown = null;
+  let body: unknown;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
@@ -148,5 +148,8 @@ export async function streamEqPrep(feeling: string, onChunk: (text: string) => v
       buffer = buffer.slice(safeLen);
     }
   }
-  if (buffer) onChunk(buffer.replace(/\u0000.*$/s, ""));
+  if (buffer) {
+    const nul = buffer.indexOf("\u0000");
+    onChunk(nul === -1 ? buffer : buffer.slice(0, nul));
+  }
 }
