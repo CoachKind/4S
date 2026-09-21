@@ -33,7 +33,7 @@ Remaining from Phases 2–4: session history, shareable debrief, coach dashboard
 | Frontend | React 19, Vite, Tailwind CSS v4, TypeScript |
 | Backend | Node 20+, Express 5, TypeScript |
 | AI | Anthropic Claude API via `@anthropic-ai/sdk`. `claude-sonnet-5` for extraction and simulation, `claude-opus-5` for the debrief |
-| Voice | OpenAI Realtime API over a raw WebSocket (`ws`), relayed by the server. `gpt-4o-realtime-preview`, voice `alloy` by default |
+| Voice | OpenAI Realtime API (GA protocol) over a raw WebSocket (`ws`), relayed by the server. `gpt-realtime`, voice `alloy` by default |
 | PDF parsing | Claude document input (base64 PDF) with structured JSON output |
 | Storage | Supabase (`sessions` table) when configured, otherwise in-memory |
 | Hosting | Vercel (client), Railway (server) |
@@ -98,7 +98,8 @@ See `.env.example`. The server reads `server/.env` (or the process environment).
 | `CORS_ORIGINS` | no | Comma-separated browser origins. Default `http://localhost:5173` |
 | `OPENAI_API_KEY` | for voice | Server only. Without it, voice connections are refused with 503 and text mode keeps working |
 | `OPENAI_VOICE` | no | Default `alloy` |
-| `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_URL` | no | Defaults `gpt-4o-realtime-preview`, `wss://api.openai.com/v1/realtime` |
+| `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_URL` | no | Defaults `gpt-realtime`, `wss://api.openai.com/v1/realtime` |
+| `OPENAI_REALTIME_API` | no | `ga` (default) or `beta`. `beta` restores the `OpenAI-Beta: realtime=v1` header and the flat session shape for preview models |
 | `MOCK_AI` | no | `1` enables canned AI responses and the mock voice relay (dev only) |
 | `VITE_API_BASE_URL` | no | Client build-time. Leave unset in dev; set to the Railway URL in production |
 
@@ -177,9 +178,11 @@ Assessment data is confirmed by the user before it is used. Prompts never contai
 
 Text mode is for rehearsing what to say; voice mode is for rehearsing how to say it. The setup screen has a Practice mode toggle (Text by default). Voice sessions share the setup, the Emotional Check-In, the persona, and the debrief with text mode. Only the conversation screen and the server relay are different.
 
-**Relay.** The browser opens a WebSocket to `/voice/:sessionId/connect`; the server opens one to the OpenAI Realtime API and relays between them. The OpenAI key never reaches the browser. On connect the server sends `session.update` with the persona prompt plus a spoken-conversation addition as `instructions`, the configured voice, pcm16 in and out, Whisper input transcription, and server-side voice activity detection. Any prior transcript is seeded into the model's context so a switch or reconnect keeps continuity. The browser may only send audio buffer events, cancel, and truncate; it can never change the session configuration.
+**Relay.** The browser opens a WebSocket to `/voice/:sessionId/connect`; the server opens one to the OpenAI Realtime API and relays between them. The OpenAI key never reaches the browser. On connect the server sends a GA-shaped `session.update` (`session.type: "realtime"`, `output_modalities: ["audio"]`, and an `audio` object with 24kHz `audio/pcm` in and out, Whisper input transcription, server-side voice activity detection, and the configured voice) carrying the persona prompt plus a spoken-conversation addition as `instructions`. Any prior transcript is seeded into the model's context so a switch or reconnect keeps continuity. The browser may only send audio buffer events, cancel, and truncate; it can never change the session configuration. `OPENAI_REALTIME_API=beta` switches the relay back to the beta header and flat session fields for preview models.
 
-**Transcript.** Turns are placed when the service creates conversation items and filled in when `conversation.item.input_audio_transcription.completed` (user) and `response.audio_transcript.done` (simulated) arrive, so order follows speech even when the user's transcription lands after the reply starts. Each completed turn is pushed to the browser as `relay.transcript` and saved to the session; the transcript is saved again when the connection closes. The debrief reads it exactly as it reads a text transcript, and adds one line to its system prompt asking the coach to consider delivery.
+**Errors.** Upstream `error` events are logged in full on the server and forwarded to the browser as `relay.error` with the service's message, so a rejected configuration or model shows on screen instead of leaving the circle at "Listening…".
+
+**Transcript.** Turns are placed when the service creates conversation items (`conversation.item.added` on GA, `conversation.item.created` on beta) and filled in when `conversation.item.input_audio_transcription.completed` (user) and `response.output_audio_transcript.done` or `response.audio_transcript.done` (simulated) arrive, so order follows speech even when the user's transcription lands after the reply starts. Each completed turn is pushed to the browser as `relay.transcript` and saved to the session; the transcript is saved again when the connection closes. The debrief reads it exactly as it reads a text transcript, and adds one line to its system prompt asking the coach to consider delivery.
 
 **Browser.** The screen asks for the microphone on load. Tap the circle once to connect; after that it is a state indicator (listening in Coach Kind yellow with expanding rings, thinking with a dark spinner, speaking with slow white rings), not push-to-talk. Audio is captured by an AudioWorklet at 24kHz mono PCM16 and played back by scheduling PCM chunks; when the user starts talking over a reply, playback stops immediately. "Switch to text mode" in the header ends the voice connection, saves what exists, and opens the text screen with the history loaded. A denied microphone shows a message and a button back to setup with Text pre-selected.
 

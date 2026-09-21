@@ -18,7 +18,9 @@ export const config = {
   voice: {
     openaiApiKey: env("OPENAI_API_KEY"),
     voice: env("OPENAI_VOICE", "alloy")!,
-    model: env("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview")!,
+    /** "ga" (default) speaks the GA Realtime protocol; "beta" restores the beta header and the flat session shape. */
+    api: (env("OPENAI_REALTIME_API", "ga") === "beta" ? "beta" : "ga") as "ga" | "beta",
+    model: env("OPENAI_REALTIME_MODEL", "gpt-realtime")!,
     url: env("OPENAI_REALTIME_URL", "wss://api.openai.com/v1/realtime")!,
   },
   supabase: {

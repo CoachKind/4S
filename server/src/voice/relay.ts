@@ -46,6 +46,69 @@ function originAllowed(req: IncomingMessage): boolean {
   return config.corsOrigins.includes(origin);
 }
 
+export type RealtimeApi = "ga" | "beta";
+
+/** Input format shared by both protocol generations: 24kHz mono PCM16. */
+const PCM_RATE = 24_000;
+
+/**
+ * The session configuration sent on connect. GA nests audio settings under
+ * session.audio and uses output_modalities; the beta protocol used flat
+ * fields. Both carry the same persona instructions and voice.
+ */
+export function buildSessionUpdate(setup: Session["setup"], api: RealtimeApi = config.voice.api, voice: string = config.voice.voice): RealtimeEvent {
+  const instructions = buildVoiceInstructions(setup);
+  if (api === "beta") {
+    return {
+      type: "session.update",
+      session: {
+        modalities: ["text", "audio"],
+        instructions,
+        voice,
+        input_audio_format: "pcm16",
+        output_audio_format: "pcm16",
+        input_audio_transcription: { model: "whisper-1" },
+        turn_detection: { type: "server_vad" },
+      },
+    };
+  }
+  return {
+    type: "session.update",
+    session: {
+      type: "realtime",
+      instructions,
+      output_modalities: ["audio"],
+      audio: {
+        input: {
+          format: { type: "audio/pcm", rate: PCM_RATE },
+          transcription: { model: "whisper-1" },
+          turn_detection: { type: "server_vad" },
+        },
+        output: {
+          format: { type: "audio/pcm", rate: PCM_RATE },
+          voice,
+        },
+      },
+    },
+  };
+}
+
+/** A prior transcript turn as a conversation item, so the model has the history. */
+export function buildSeedItem(message: Session["transcript"][number], index: number, api: RealtimeApi = config.voice.api): RealtimeEvent {
+  const isUser = message.role === "user";
+  // GA names assistant text "output_text"; beta named it "text". User text is "input_text" on both.
+  const assistantType = api === "beta" ? "text" : "output_text";
+  return {
+    type: "conversation.item.create",
+    item: {
+      id: `${SEED_PREFIX}${index}`,
+      type: "message",
+      role: isUser ? "user" : "assistant",
+      content: [{ type: isUser ? "input_text" : assistantType, text: message.content }],
+    },
+  };
+}
+
 export function createUpstream(): RealtimeUpstream {
   if (config.mockAi) return new MockRealtimeUpstream();
   return new OpenAiRealtimeUpstream();
@@ -133,30 +196,9 @@ export function runRelay(browser: WebSocket, session: Session): void {
   }
 
   upstream.on("open", () => {
-    upstream.send({
-      type: "session.update",
-      session: {
-        modalities: ["text", "audio"],
-        instructions: buildVoiceInstructions(session.setup),
-        voice: config.voice.voice,
-        input_audio_format: "pcm16",
-        output_audio_format: "pcm16",
-        input_audio_transcription: { model: "whisper-1" },
-        turn_detection: { type: "server_vad" },
-      },
-    });
+    upstream.send(buildSessionUpdate(session.setup));
     // Carry any existing turns (a text conversation switched to voice, or a reconnect) into the model's context.
-    session.transcript.forEach((m, i) => {
-      upstream.send({
-        type: "conversation.item.create",
-        item: {
-          id: `${SEED_PREFIX}${i}`,
-          type: "message",
-          role: m.role === "user" ? "user" : "assistant",
-          content: [m.role === "user" ? { type: "input_text", text: m.content } : { type: "text", text: m.content }],
-        },
-      });
-    });
+    session.transcript.forEach((m, i) => upstream.send(buildSeedItem(m, i)));
     sendJson(browser, { type: "relay.ready", name, transcript: transcript.messages() });
   });
 
@@ -167,8 +209,12 @@ export function runRelay(browser: WebSocket, session: Session): void {
       void persist();
     }
     if (event.type === "error") {
-      // Audio format or protocol errors are logged server-side; only connection loss is surfaced.
+      // Logged in full server-side, and surfaced to the screen so a protocol
+      // or configuration problem is visible instead of a silent "Listening…".
+      const detail = (event.error ?? {}) as { message?: unknown; code?: unknown; type?: unknown };
       console.error("voice: upstream error event", JSON.stringify(event.error ?? event));
+      const message = typeof detail.message === "string" && detail.message ? detail.message : "The voice service reported an error.";
+      sendJson(browser, { type: "relay.error", message: `${name} couldn't respond. ${message}`, code: detail.code ?? null });
       return;
     }
     sendJson(browser, event);

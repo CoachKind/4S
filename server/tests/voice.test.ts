@@ -6,7 +6,7 @@ import WebSocket from "ws";
 process.env.MOCK_AI = "1";
 
 const { createApp } = await import("../src/app.ts");
-const { attachVoiceRelay } = await import("../src/voice/relay.ts");
+const { attachVoiceRelay, buildSeedItem, buildSessionUpdate } = await import("../src/voice/relay.ts");
 const { TranscriptAccumulator } = await import("../src/voice/transcript.ts");
 const { buildVoiceInstructions, VOICE_ADDITION } = await import("../src/prompts/voice.ts");
 const { buildDebriefSystemPrompt, VOICE_DEBRIEF_LINE } = await import("../src/prompts/debrief.ts");
@@ -32,6 +32,7 @@ async function withServer<T>(fn: (base: string, wsBase: string) => Promise<T>): 
   try {
     return await fn(`http://127.0.0.1:${port}`, `ws://127.0.0.1:${port}`);
   } finally {
+    server.closeAllConnections();
     await new Promise((r) => server.close(r));
   }
 }
@@ -194,5 +195,96 @@ test("reconnecting carries the prior transcript and keeps order", async () => {
     await new Promise((r) => setTimeout(r, 50));
     const saved = await getSession(session.id);
     assert.deepEqual(saved.transcript.map((m) => m.role), ["user", "simulated", "user", "simulated"]);
+  });
+});
+
+test("session.update takes the GA shape by default and the beta shape on request", () => {
+  const ga = buildSessionUpdate(setup, "ga", "alloy") as { session: Record<string, unknown> };
+  assert.equal(ga.session.type, "realtime");
+  assert.deepEqual(ga.session.output_modalities, ["audio"]);
+  const audio = ga.session.audio as { input: Record<string, unknown>; output: Record<string, unknown> };
+  assert.deepEqual(audio.input.format, { type: "audio/pcm", rate: 24000 });
+  assert.deepEqual(audio.input.turn_detection, { type: "server_vad" });
+  assert.deepEqual(audio.input.transcription, { model: "whisper-1" });
+  assert.deepEqual(audio.output.format, { type: "audio/pcm", rate: 24000 });
+  assert.equal(audio.output.voice, "alloy");
+  assert.match(String(ga.session.instructions), /You are Marcus/);
+  for (const legacy of ["modalities", "voice", "input_audio_format", "output_audio_format", "turn_detection"]) {
+    assert.ok(!(legacy in ga.session), `GA session must not carry ${legacy}`);
+  }
+
+  const beta = buildSessionUpdate(setup, "beta", "alloy") as { session: Record<string, unknown> };
+  assert.deepEqual(beta.session.modalities, ["text", "audio"]);
+  assert.equal(beta.session.input_audio_format, "pcm16");
+  assert.equal(beta.session.voice, "alloy");
+  assert.ok(!("type" in beta.session));
+  assert.ok(!("audio" in beta.session));
+});
+
+test("seed items use the content types each protocol expects", () => {
+  const user = buildSeedItem({ id: "x", role: "user", content: "hi", createdAt: "" }, 0, "ga") as { item: { id: string; content: Array<{ type: string }> } };
+  assert.equal(user.item.id, "seed_0");
+  assert.equal(user.item.content[0].type, "input_text");
+  const gaAssistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1, "ga") as { item: { role: string; content: Array<{ type: string }> } };
+  assert.equal(gaAssistant.item.role, "assistant");
+  assert.equal(gaAssistant.item.content[0].type, "output_text");
+  const betaAssistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1, "beta") as { item: { content: Array<{ type: string }> } };
+  assert.equal(betaAssistant.item.content[0].type, "text");
+});
+
+test("transcript accumulator understands GA item and transcript event names", () => {
+  const acc = new TranscriptAccumulator();
+  assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "u1", type: "message", role: "user" } }), null);
+  assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "a1", type: "message", role: "assistant" } }), null);
+  assert.equal(acc.handle({ type: "response.output_audio_transcript.done", item_id: "a1", transcript: "Which report?" })?.role, "simulated");
+  assert.equal(acc.handle({ type: "conversation.item.done", item: { id: "a1", type: "message", role: "assistant" } }), null);
+  assert.equal(acc.handle({ type: "conversation.item.input_audio_transcription.completed", item_id: "u1", transcript: "The Friday one." })?.role, "user");
+  assert.deepEqual(
+    acc.messages().map((m) => [m.role, m.content]),
+    [
+      ["user", "The Friday one."],
+      ["simulated", "Which report?"],
+    ],
+  );
+});
+
+test("relay round trip works on the GA protocol (the mock speaks GA when configured with a GA session)", async () => {
+  await withServer(async (_base, wsBase) => {
+    const session = await createSession(setup, "voice");
+    const ws = await connect(`${wsBase}/voice/${session.id}/connect`);
+    // session.updated arrives before relay.ready, so collect everything from the start.
+    const received: Array<Record<string, unknown>> = [];
+    ws.on("message", (data) => received.push(JSON.parse(data.toString()) as Record<string, unknown>));
+    await nextEvent(ws, "relay.ready");
+    const updated = received.find((e) => e.type === "session.updated");
+    assert.ok(updated, "mock should acknowledge the session.update");
+    assert.equal((updated.session as { type?: string }).type, "realtime");
+    ws.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+    await nextEvent(ws, "conversation.item.added");
+    await nextEvent(ws, "response.output_audio.delta");
+    const second = await nextEvent(ws, "relay.transcript");
+    // Two relay.transcript events arrive (user, then simulated); wait for the simulated one.
+    const turn = (second.message as { role: string }).role === "simulated" ? second : await nextEvent(ws, "relay.transcript");
+    assert.equal((turn.message as { role: string }).role, "simulated");
+    await nextEvent(ws, "response.done");
+    ws.close();
+    await new Promise((r) => ws.once("close", r));
+    await new Promise((r) => setTimeout(r, 50));
+    const saved = await getSession(session.id);
+    assert.deepEqual(saved.transcript.map((m) => m.role), ["user", "simulated"]);
+  });
+});
+
+test("upstream error events reach the browser as relay.error with the service's message", async () => {
+  await withServer(async (_base, wsBase) => {
+    const session = await createSession(setup, "voice");
+    const ws = await connect(`${wsBase}/voice/${session.id}/connect`);
+    await nextEvent(ws, "relay.ready");
+    ws.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
+    const err = await nextEvent(ws, "relay.error");
+    assert.match(String(err.message), /Marcus couldn't respond\. Synthetic error from the mock relay\./);
+    assert.equal(err.code, "mock_error");
+    ws.close();
+    await new Promise((r) => ws.once("close", r));
   });
 });
