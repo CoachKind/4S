@@ -15,11 +15,9 @@ export class OpenAiRealtimeUpstream extends EventEmitter implements RealtimeUpst
     const key = config.voice.openaiApiKey;
     if (!key) throw new Error("OPENAI_API_KEY is not set on the server.");
     const url = `${config.voice.url}?model=${encodeURIComponent(config.voice.model)}`;
-    // GA Realtime API authenticates with the bearer token alone. The beta
-    // protocol (OPENAI_REALTIME_API=beta) still needs its opt-in header.
-    const headers: Record<string, string> = { Authorization: `Bearer ${key}` };
-    if (config.voice.api === "beta") headers["OpenAI-Beta"] = "realtime=v1";
-    this.ws = new WebSocket(url, { headers });
+    // GA Realtime API: bearer auth only. The beta interface and its opt-in
+    // header were retired in May 2026, so no extra headers are sent.
+    this.ws = new WebSocket(url, { headers: { Authorization: `Bearer ${key}` } });
     this.ws.on("open", () => this.emit("open"));
     this.ws.on("message", (data) => {
       try {

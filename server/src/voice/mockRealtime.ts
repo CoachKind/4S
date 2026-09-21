@@ -7,11 +7,9 @@ import type { RealtimeEvent, RealtimeUpstream } from "./upstream.js";
  *
  * It never hears anything. After enough audio has been appended (or on an
  * explicit commit) it plays one scripted turn: a canned "transcription" of
- * the user, then a canned spoken reply as silent PCM plus its transcript.
- * It speaks whichever protocol the relay configures it with: a GA-shaped
- * session.update (session.type === "realtime") makes it use GA event names,
- * otherwise the beta names. An input_audio_buffer.clear makes it emit a
- * synthetic error event, so error forwarding can be exercised in tests.
+ * the user, then a canned spoken reply as silent PCM plus its transcript,
+ * using the GA Realtime event names. An input_audio_buffer.clear makes it
+ * emit a synthetic error event, so error forwarding can be exercised in tests.
  */
 
 const SAMPLE_RATE = 24_000;
@@ -41,7 +39,6 @@ export class MockRealtimeUpstream extends EventEmitter implements RealtimeUpstre
   private busy = false;
   private turn = 0;
   private closed = false;
-  private ga = true;
   private timers: NodeJS.Timeout[] = [];
 
   constructor() {
@@ -62,12 +59,9 @@ export class MockRealtimeUpstream extends EventEmitter implements RealtimeUpstre
   send(event: RealtimeEvent): void {
     if (this.closed) return;
     switch (event.type) {
-      case "session.update": {
-        const session = (event.session ?? {}) as { type?: unknown };
-        this.ga = session.type === "realtime";
+      case "session.update":
         this.emit("message", { type: "session.updated", session: event.session });
         return;
-      }
       case "input_audio_buffer.append": {
         const audio = typeof event.audio === "string" ? event.audio : "";
         this.pending += audio.length;
@@ -86,8 +80,8 @@ export class MockRealtimeUpstream extends EventEmitter implements RealtimeUpstre
       case "conversation.item.create": {
         const item = (event.item ?? {}) as { id?: string; role?: string };
         const created = { id: item.id ?? newId(), type: "message", role: item.role ?? "user" };
-        this.emit("message", { type: this.ga ? "conversation.item.added" : "conversation.item.created", item: created });
-        if (this.ga) this.emit("message", { type: "conversation.item.done", item: created });
+        this.emit("message", { type: "conversation.item.added", item: created });
+        this.emit("message", { type: "conversation.item.done", item: created });
         return;
       }
       default:
@@ -104,30 +98,20 @@ export class MockRealtimeUpstream extends EventEmitter implements RealtimeUpstre
     const userItem = `item_u_${newId().slice(0, 8)}`;
     const assistantItem = `item_a_${newId().slice(0, 8)}`;
     const responseId = `resp_${newId().slice(0, 8)}`;
-    const ga = this.ga;
-    const itemEvent = ga ? "conversation.item.added" : "conversation.item.created";
-    const audioDelta = ga ? "response.output_audio.delta" : "response.audio.delta";
-    const audioDone = ga ? "response.output_audio.done" : "response.audio.done";
-    const transcriptDone = ga ? "response.output_audio_transcript.done" : "response.audio_transcript.done";
 
     const steps: Array<[number, RealtimeEvent]> = [
       [0, { type: "input_audio_buffer.speech_started", item_id: userItem }],
       [400, { type: "input_audio_buffer.speech_stopped", item_id: userItem }],
       [420, { type: "input_audio_buffer.committed", item_id: userItem }],
-      [440, { type: itemEvent, item: { id: userItem, type: "message", role: "user" } }],
+      [440, { type: "conversation.item.added", item: { id: userItem, type: "message", role: "user" } }],
       [900, { type: "conversation.item.input_audio_transcription.completed", item_id: userItem, transcript: USER_LINES[i] }],
       [950, { type: "response.created", response: { id: responseId } }],
-      [1000, { type: itemEvent, item: { id: assistantItem, type: "message", role: "assistant" } }],
-      [1100, { type: audioDelta, response_id: responseId, item_id: assistantItem, delta: silence(0.4) }],
-      [1300, { type: audioDelta, response_id: responseId, item_id: assistantItem, delta: silence(0.4) }],
-      [1500, { type: transcriptDone, response_id: responseId, item_id: assistantItem, transcript: REPLIES[i] }],
-      [1520, { type: audioDone, response_id: responseId, item_id: assistantItem }],
-      [
-        1560,
-        ga
-          ? { type: "conversation.item.done", item: { id: assistantItem, type: "message", role: "assistant" } }
-          : { type: "response.output_item.done", item: { id: assistantItem } },
-      ],
+      [1000, { type: "conversation.item.added", item: { id: assistantItem, type: "message", role: "assistant" } }],
+      [1100, { type: "response.output_audio.delta", response_id: responseId, item_id: assistantItem, delta: silence(0.4) }],
+      [1300, { type: "response.output_audio.delta", response_id: responseId, item_id: assistantItem, delta: silence(0.4) }],
+      [1500, { type: "response.output_audio_transcript.done", response_id: responseId, item_id: assistantItem, transcript: REPLIES[i] }],
+      [1520, { type: "response.output_audio.done", response_id: responseId, item_id: assistantItem }],
+      [1560, { type: "conversation.item.done", item: { id: assistantItem, type: "message", role: "assistant" } }],
       [1600, { type: "response.done", response: { id: responseId, status: "completed" } }],
     ];
     for (const [ms, ev] of steps) this.later(() => this.emit("message", ev), ms);

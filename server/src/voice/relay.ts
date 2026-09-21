@@ -46,42 +46,25 @@ function originAllowed(req: IncomingMessage): boolean {
   return config.corsOrigins.includes(origin);
 }
 
-export type RealtimeApi = "ga" | "beta";
-
-/** Input format shared by both protocol generations: 24kHz mono PCM16. */
+/** Audio format on both directions: 24kHz mono PCM16. */
 const PCM_RATE = 24_000;
 
 /**
- * The session configuration sent on connect. GA nests audio settings under
- * session.audio and uses output_modalities; the beta protocol used flat
- * fields. Both carry the same persona instructions and voice.
+ * The GA Realtime session configuration sent on connect: audio in and out,
+ * input transcription, server-side voice activity detection, and the persona
+ * prompt (plus the spoken-conversation addition) as instructions.
  */
-export function buildSessionUpdate(setup: Session["setup"], api: RealtimeApi = config.voice.api, voice: string = config.voice.voice): RealtimeEvent {
-  const instructions = buildVoiceInstructions(setup);
-  if (api === "beta") {
-    return {
-      type: "session.update",
-      session: {
-        modalities: ["text", "audio"],
-        instructions,
-        voice,
-        input_audio_format: "pcm16",
-        output_audio_format: "pcm16",
-        input_audio_transcription: { model: "whisper-1" },
-        turn_detection: { type: "server_vad" },
-      },
-    };
-  }
+export function buildSessionUpdate(setup: Session["setup"], voice: string = config.voice.voice): RealtimeEvent {
   return {
     type: "session.update",
     session: {
       type: "realtime",
-      instructions,
       output_modalities: ["audio"],
+      instructions: buildVoiceInstructions(setup),
       audio: {
         input: {
           format: { type: "audio/pcm", rate: PCM_RATE },
-          transcription: { model: "whisper-1" },
+          transcription: { model: config.voice.transcriptionModel },
           turn_detection: { type: "server_vad" },
         },
         output: {
@@ -93,19 +76,28 @@ export function buildSessionUpdate(setup: Session["setup"], api: RealtimeApi = c
   };
 }
 
-/** A prior transcript turn as a conversation item, so the model has the history. */
-export function buildSeedItem(message: Session["transcript"][number], index: number, api: RealtimeApi = config.voice.api): RealtimeEvent {
+/** A prior transcript turn as a GA conversation item, so the model has the history. */
+export function buildSeedItem(message: Session["transcript"][number], index: number): RealtimeEvent {
   const isUser = message.role === "user";
-  // GA names assistant text "output_text"; beta named it "text". User text is "input_text" on both.
-  const assistantType = api === "beta" ? "text" : "output_text";
   return {
     type: "conversation.item.create",
     item: {
       id: `${SEED_PREFIX}${index}`,
       type: "message",
       role: isUser ? "user" : "assistant",
-      content: [{ type: isUser ? "input_text" : assistantType, text: message.content }],
+      content: [{ type: isUser ? "input_text" : "output_text", text: message.content }],
     },
+  };
+}
+
+/** The fields of an upstream error worth logging. Never the whole event: it can echo request content. */
+function describeUpstreamError(error: unknown): { type?: string; code?: string; param?: string; message?: string } {
+  const e = (error ?? {}) as Record<string, unknown>;
+  return {
+    type: typeof e.type === "string" ? e.type : undefined,
+    code: typeof e.code === "string" ? e.code : undefined,
+    param: typeof e.param === "string" ? e.param : undefined,
+    message: typeof e.message === "string" ? e.message : undefined,
   };
 }
 
@@ -164,6 +156,7 @@ export function runRelay(browser: WebSocket, session: Session): void {
   const transcript = new TranscriptAccumulator(session.transcript);
   let upstream: RealtimeUpstream;
   let closed = false;
+  let readySent = false;
   let saving: Promise<unknown> = Promise.resolve();
 
   const persist = () => {
@@ -199,6 +192,7 @@ export function runRelay(browser: WebSocket, session: Session): void {
     upstream.send(buildSessionUpdate(session.setup));
     // Carry any existing turns (a text conversation switched to voice, or a reconnect) into the model's context.
     session.transcript.forEach((m, i) => upstream.send(buildSeedItem(m, i)));
+    readySent = true;
     sendJson(browser, { type: "relay.ready", name, transcript: transcript.messages() });
   });
 
@@ -209,12 +203,15 @@ export function runRelay(browser: WebSocket, session: Session): void {
       void persist();
     }
     if (event.type === "error") {
-      // Logged in full server-side, and surfaced to the screen so a protocol
-      // or configuration problem is visible instead of a silent "Listening…".
-      const detail = (event.error ?? {}) as { message?: unknown; code?: unknown; type?: unknown };
-      console.error("voice: upstream error event", JSON.stringify(event.error ?? event));
-      const message = typeof detail.message === "string" && detail.message ? detail.message : "The voice service reported an error.";
-      sendJson(browser, { type: "relay.error", message: `${name} couldn't respond. ${message}`, code: detail.code ?? null });
+      // Always surfaced to the screen, so a rejected session configuration is
+      // never silent. Before relay.ready it means voice could not start at all.
+      const detail = describeUpstreamError(event.error);
+      console.error("voice: upstream error", JSON.stringify(detail));
+      const reason = detail.message ?? "The voice service reported an error.";
+      const message = readySent
+        ? `${name} couldn't respond. ${reason}`
+        : `Voice mode couldn't start. ${reason} Try again, or switch to text mode.`;
+      sendJson(browser, { type: "relay.error", message, code: detail.code ?? null, fatal: !readySent });
       return;
     }
     sendJson(browser, event);

@@ -77,10 +77,10 @@ test("debrief system prompt carries the voice line only in voice mode", () => {
 
 test("transcript accumulator orders turns by item creation, not by text arrival", () => {
   const acc = new TranscriptAccumulator([{ id: "p1", role: "user", content: "earlier", createdAt: "" }]);
-  assert.equal(acc.handle({ type: "conversation.item.created", item: { id: "u1", type: "message", role: "user" } }), null);
-  assert.equal(acc.handle({ type: "conversation.item.created", item: { id: "a1", type: "message", role: "assistant" } }), null);
+  assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "u1", type: "message", role: "user" } }), null);
+  assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "a1", type: "message", role: "assistant" } }), null);
   // The reply's transcript lands before the user's transcription completes.
-  const reply = acc.handle({ type: "response.audio_transcript.done", item_id: "a1", transcript: "Which report?" });
+  const reply = acc.handle({ type: "response.output_audio_transcript.done", item_id: "a1", transcript: "Which report?" });
   assert.equal(reply?.role, "simulated");
   const spoken = acc.handle({ type: "conversation.item.input_audio_transcription.completed", item_id: "u1", transcript: "The Friday report." });
   assert.equal(spoken?.role, "user");
@@ -93,7 +93,7 @@ test("transcript accumulator orders turns by item creation, not by text arrival"
     ],
   );
   // Seeded items and non-message items are ignored.
-  assert.equal(acc.handle({ type: "conversation.item.created", item: { id: "seed_0", type: "message", role: "user" } }), null);
+  assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "seed_0", type: "message", role: "user" } }), null);
   assert.equal(acc.handle({ type: "conversation.item.input_audio_transcription.completed", item_id: "seed_0", transcript: "x" }), null);
   assert.equal(acc.messages().length, 3);
 });
@@ -198,38 +198,31 @@ test("reconnecting carries the prior transcript and keeps order", async () => {
   });
 });
 
-test("session.update takes the GA shape by default and the beta shape on request", () => {
-  const ga = buildSessionUpdate(setup, "ga", "alloy") as { session: Record<string, unknown> };
+test("session.update takes the GA shape with the configured models and voice", () => {
+  const ga = buildSessionUpdate(setup, "alloy") as { session: Record<string, unknown> };
   assert.equal(ga.session.type, "realtime");
   assert.deepEqual(ga.session.output_modalities, ["audio"]);
   const audio = ga.session.audio as { input: Record<string, unknown>; output: Record<string, unknown> };
   assert.deepEqual(audio.input.format, { type: "audio/pcm", rate: 24000 });
   assert.deepEqual(audio.input.turn_detection, { type: "server_vad" });
-  assert.deepEqual(audio.input.transcription, { model: "whisper-1" });
+  assert.deepEqual(audio.input.transcription, { model: "gpt-4o-mini-transcribe" });
   assert.deepEqual(audio.output.format, { type: "audio/pcm", rate: 24000 });
   assert.equal(audio.output.voice, "alloy");
   assert.match(String(ga.session.instructions), /You are Marcus/);
-  for (const legacy of ["modalities", "voice", "input_audio_format", "output_audio_format", "turn_detection"]) {
-    assert.ok(!(legacy in ga.session), `GA session must not carry ${legacy}`);
+  assert.match(String(ga.session.instructions), /spoken conversation/);
+  for (const legacy of ["modalities", "voice", "input_audio_format", "output_audio_format", "input_audio_transcription", "turn_detection"]) {
+    assert.ok(!(legacy in ga.session), `GA session must not carry the beta field ${legacy}`);
   }
-
-  const beta = buildSessionUpdate(setup, "beta", "alloy") as { session: Record<string, unknown> };
-  assert.deepEqual(beta.session.modalities, ["text", "audio"]);
-  assert.equal(beta.session.input_audio_format, "pcm16");
-  assert.equal(beta.session.voice, "alloy");
-  assert.ok(!("type" in beta.session));
-  assert.ok(!("audio" in beta.session));
 });
 
-test("seed items use the content types each protocol expects", () => {
-  const user = buildSeedItem({ id: "x", role: "user", content: "hi", createdAt: "" }, 0, "ga") as { item: { id: string; content: Array<{ type: string }> } };
+test("seed items match the GA item schema", () => {
+  const user = buildSeedItem({ id: "x", role: "user", content: "hi", createdAt: "" }, 0) as { item: { id: string; role: string; content: Array<{ type: string; text: string }> } };
   assert.equal(user.item.id, "seed_0");
-  assert.equal(user.item.content[0].type, "input_text");
-  const gaAssistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1, "ga") as { item: { role: string; content: Array<{ type: string }> } };
-  assert.equal(gaAssistant.item.role, "assistant");
-  assert.equal(gaAssistant.item.content[0].type, "output_text");
-  const betaAssistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1, "beta") as { item: { content: Array<{ type: string }> } };
-  assert.equal(betaAssistant.item.content[0].type, "text");
+  assert.equal(user.item.role, "user");
+  assert.deepEqual(user.item.content, [{ type: "input_text", text: "hi" }]);
+  const assistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1) as { item: { role: string; content: Array<{ type: string; text: string }> } };
+  assert.equal(assistant.item.role, "assistant");
+  assert.deepEqual(assistant.item.content, [{ type: "output_text", text: "hey" }]);
 });
 
 test("transcript accumulator understands GA item and transcript event names", () => {
@@ -248,7 +241,7 @@ test("transcript accumulator understands GA item and transcript event names", ()
   );
 });
 
-test("relay round trip works on the GA protocol (the mock speaks GA when configured with a GA session)", async () => {
+test("relay round trip works on the GA protocol", async () => {
   await withServer(async (_base, wsBase) => {
     const session = await createSession(setup, "voice");
     const ws = await connect(`${wsBase}/voice/${session.id}/connect`);
@@ -284,7 +277,25 @@ test("upstream error events reach the browser as relay.error with the service's 
     const err = await nextEvent(ws, "relay.error");
     assert.match(String(err.message), /Marcus couldn't respond\. Synthetic error from the mock relay\./);
     assert.equal(err.code, "mock_error");
+    assert.equal(err.fatal, false);
     ws.close();
     await new Promise((r) => ws.once("close", r));
   });
+});
+
+test("no beta event names remain anywhere in the voice code or client", async () => {
+  const { readFileSync } = await import("node:fs");
+  const files = [
+    "../src/voice/relay.ts",
+    "../src/voice/transcript.ts",
+    "../src/voice/mockRealtime.ts",
+    "../src/voice/openaiRealtime.ts",
+    "../../client/src/lib/voiceClient.ts",
+  ];
+  const beta = [/conversation\.item\.created/, /response\.audio\./, /response\.audio_transcript/, /response\.text\./, /realtime=v1/, /input_audio_format/, /gpt-4o-realtime/];
+  for (const f of files) {
+    const src = readFileSync(new URL(f, import.meta.url), "utf8");
+    for (const pattern of beta) assert.doesNotMatch(src, pattern, `${f} still references ${pattern}`);
+    assert.doesNotMatch(src, /subordinate/i);
+  }
 });

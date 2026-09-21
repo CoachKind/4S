@@ -86,6 +86,8 @@ export class VoiceClient {
         return;
       case "relay.error":
         this.events.onError(String(event.message ?? "Voice connection lost."));
+        // A fatal error (the session could not be configured) means nothing will ever play; stop cleanly.
+        if (event.fatal === true) void this.stop().then(() => this.events.onClosed());
         return;
       case "input_audio_buffer.speech_started":
         // The user is talking, possibly over the reply: stop playback immediately.
@@ -100,7 +102,6 @@ export class VoiceClient {
         this.responseActive = true;
         if (this.state !== "speaking") this.setState("processing");
         return;
-      case "response.audio.delta":
       case "response.output_audio.delta":
         if (typeof event.delta === "string") {
           this.player?.enqueue(event.delta);

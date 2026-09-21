@@ -4,8 +4,7 @@ import type { RealtimeEvent } from "./upstream.js";
 /**
  * Builds the transcript from Realtime events, in conversation order.
  *
- * Items are placed when the service creates them (conversation.item.created
- * on the beta protocol, conversation.item.added on GA),
+ * Items are placed when the service creates them (conversation.item.added),
  * and their text arrives later: the user's speech transcription can complete
  * after the assistant has already started replying, so ordering by arrival
  * would interleave turns wrongly. Ordering by item creation keeps user and
@@ -49,8 +48,7 @@ export class TranscriptAccumulator {
    */
   handle(event: RealtimeEvent): TranscriptMessage | null {
     switch (event.type) {
-      // Beta sends "created"; GA sends "added" when the item is placed and "done" when it is final.
-      case "conversation.item.created":
+      // GA sends "added" when the item is placed and "done" when it is final.
       case "conversation.item.added":
       case "conversation.item.done": {
         const item = event.item as { id?: string; type?: string; role?: string } | undefined;
@@ -66,7 +64,6 @@ export class TranscriptAccumulator {
         item.content = String(event.transcript ?? "").trim();
         return item.content ? this.toMessage(item) : null;
       }
-      case "response.audio_transcript.done":
       case "response.output_audio_transcript.done": {
         const id = String(event.item_id ?? "");
         if (!id) return null;
