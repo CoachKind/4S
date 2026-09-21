@@ -37,7 +37,10 @@ function Thinking({ otherName }: { otherName: string }) {
     <div className="flex justify-start">
       <div>
         <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted">{otherName}</div>
-        <div className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-md bg-surface-2 px-4 py-3.5" aria-label={`${otherName} is thinking`}>
+        <div
+          className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-md bg-surface-2 px-4 py-3.5"
+          aria-label={`${otherName} is thinking`}
+        >
           <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
           <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
           <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
@@ -143,7 +146,10 @@ export function SimulationScreen({ session, options, onDebriefed }: Props) {
           <div className="min-w-0">
             <div className="text-sm text-ink">
               <span className="font-semibold">{dynamicSentence(setup.userRole.level, setup.simulatedRole.level)}</span>
-              <span className="text-muted"> · {setup.scenario.title} · {otherName}</span>
+              <span className="text-muted">
+                {" "}
+                · {setup.scenario.title} · {otherName}
+              </span>
             </div>
             {setup.situationContext && (
               <p className="mt-0.5 truncate text-xs text-muted" title={setup.situationContext}>

@@ -199,7 +199,11 @@ test("the persona never treats the user as the senior one in upward conversation
 });
 
 test("debrief prompts are direction-aware and carry the exact dynamic sentence", () => {
-  for (const [u, s] of [[1, 2], [3, 1], [2, 2]] as Array<[RoleLevel, RoleLevel]>) {
+  for (const [u, s] of [
+    [1, 2],
+    [3, 1],
+    [2, 2],
+  ] as Array<[RoleLevel, RoleLevel]>) {
     const setup = setupFor(u, s);
     const system = buildDebriefSystemPrompt(setup);
     assert.match(system, new RegExp(`"${DIRECTION_DEBRIEF_SENTENCE[setup.conversationDirection].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
@@ -257,7 +261,7 @@ test("transcript maps user to user and simulated to assistant", () => {
 });
 
 test("cleanSpokenText strips labels, quotes, and stage directions", () => {
-  assert.equal(cleanSpokenText('Marcus: "I don\'t think that\'s fair."'), "I don't think that's fair.");
+  assert.equal(cleanSpokenText("Marcus: \"I don't think that's fair.\""), "I don't think that's fair.");
   assert.equal(cleanSpokenText("*sighs* Fine. [pauses] What do you want me to say?"), "Fine. What do you want me to say?");
   assert.equal(cleanSpokenText("  Okay.  "), "Okay.");
 });

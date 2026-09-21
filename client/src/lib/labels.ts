@@ -8,15 +8,35 @@ export const DEFAULT_OPTIONS: SetupOptions = {
   directions: DIRECTION_LABELS,
   scenarios: SCENARIO_CARDS,
   responseStyles: [
-    { id: "defensive", label: "Defensive", description: "Takes feedback personally, challenges observations, protects ego, pushes back firmly." },
-    { id: "deflecting", label: "Deflecting", description: "Shifts blame to circumstances, team capacity, or unclear expectations while staying calm." },
-    { id: "emotional", label: "Emotional", description: "Visibly affected. May go quiet or show frustration; you must manage the message and the person." },
-    { id: "agreeable", label: "Agreeable", description: "Says all the right things without real depth or accountability, trying to end the discomfort." },
+    {
+      id: "defensive",
+      label: "Defensive",
+      description: "Takes feedback personally, challenges observations, protects ego, pushes back firmly.",
+    },
+    {
+      id: "deflecting",
+      label: "Deflecting",
+      description: "Shifts blame to circumstances, team capacity, or unclear expectations while staying calm.",
+    },
+    {
+      id: "emotional",
+      label: "Emotional",
+      description: "Visibly affected. May go quiet or show frustration; you must manage the message and the person.",
+    },
+    {
+      id: "agreeable",
+      label: "Agreeable",
+      description: "Says all the right things without real depth or accountability, trying to end the discomfort.",
+    },
   ],
   difficulties: [
     { id: "moderate", label: "Moderate", description: "Some resistance, workable, allows progress." },
     { id: "challenging", label: "Challenging", description: "Real pushback. You must earn each step." },
-    { id: "realistic", label: "Realistic", description: "Fully realistic. May include denial, emotional reactivity, or flipping accountability back on you." },
+    {
+      id: "realistic",
+      label: "Realistic",
+      description: "Fully realistic. May include denial, emotional reactivity, or flipping accountability back on you.",
+    },
   ],
 };
 

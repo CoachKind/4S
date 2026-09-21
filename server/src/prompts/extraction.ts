@@ -13,5 +13,4 @@ Guidance for locating each field:
 
 Return bullet statements as concise sentences, each under 25 words, preserving the report's meaning.`;
 
-export const EXTRACTION_USER_PROMPT =
-  "Extract the structured assessment data from this TriMetrix DNA report.";
+export const EXTRACTION_USER_PROMPT = "Extract the structured assessment data from this TriMetrix DNA report.";

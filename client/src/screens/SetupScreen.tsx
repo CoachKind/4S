@@ -6,7 +6,17 @@ import { api, ApiError } from "../lib/api";
 import { conversationDirection, DIRECTION_LABELS, ROLE_LEVELS, simulatedTerm } from "../lib/roles";
 import { ScenarioIcon } from "../components/ScenarioIcon";
 import { scenarioTitle } from "../lib/scenarios";
-import type { Assessment, AssessmentSlot, Difficulty, ResponseStyle, RoleLevel, ScenarioId, SessionMode, SessionSetupInput, SetupOptions } from "../lib/types";
+import type {
+  Assessment,
+  AssessmentSlot,
+  Difficulty,
+  ResponseStyle,
+  RoleLevel,
+  ScenarioId,
+  SessionMode,
+  SessionSetupInput,
+  SetupOptions,
+} from "../lib/types";
 import { AssessmentReviewScreen } from "./AssessmentReviewScreen";
 
 interface Props {
@@ -108,7 +118,12 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
   }
 
   const canSubmit =
-    userLevel !== null && simulatedLevel !== null && simulatedName.trim().length > 0 && !starting && !slots.user.busy && !slots.simulated.busy;
+    userLevel !== null &&
+    simulatedLevel !== null &&
+    simulatedName.trim().length > 0 &&
+    !starting &&
+    !slots.user.busy &&
+    !slots.simulated.busy;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -155,8 +170,8 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
           <div>
             <h1 className="font-serif text-3xl leading-tight text-ink sm:text-4xl">Safely Simulate Stressful Situations</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-              Practice a difficult conversation before it happens for real. Set the scene, have the conversation, and get a
-              debrief on what landed and what to sharpen.
+              Practice a difficult conversation before it happens for real. Set the scene, have the conversation, and get a debrief on what
+              landed and what to sharpen.
             </p>
           </div>
         </div>
@@ -165,11 +180,19 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
           <div className="space-y-6">
             <Card className="p-5">
               <h2 className="mb-1 font-serif text-xl text-ink">Who's in the room</h2>
-              <p className="mb-5 text-xs text-muted">Conversations run in every direction. Tell us where you each sit so the simulation reflects the real dynamic.</p>
+              <p className="mb-5 text-xs text-muted">
+                Conversations run in every direction. Tell us where you each sit so the simulation reflects the real dynamic.
+              </p>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <RoleSelector name="userLevel" label="You are a…" value={userLevel} options={options.roleLevels} onChange={setUserLevel} />
-                <RoleSelector name="simulatedLevel" label="You are speaking with a…" value={simulatedLevel} options={options.roleLevels} onChange={setSimulatedLevel} />
+                <RoleSelector
+                  name="simulatedLevel"
+                  label="You are speaking with a…"
+                  value={simulatedLevel}
+                  options={options.roleLevels}
+                  onChange={setSimulatedLevel}
+                />
               </div>
 
               {direction && (
@@ -236,7 +259,9 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
                           }`}
                         >
                           <input type="radio" name="scenario" className="sr-only" checked={selected} onChange={() => setScenario(s.id)} />
-                          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${selected ? "bg-brand text-base" : "bg-surface-3 text-muted"}`}>
+                          <span
+                            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${selected ? "bg-brand text-base" : "bg-surface-3 text-muted"}`}
+                          >
                             <ScenarioIcon id={s.id} />
                           </span>
                           <span className="min-w-0">
@@ -261,14 +286,19 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
                     maxLength={4000}
                     placeholder={options.scenarios.find((s) => s.id === scenario)?.placeholder ?? ""}
                   />
-                  <p className="mt-1.5 text-xs text-muted">What's been happening? Have you addressed this before? What's at stake? The more specific you are, the more realistic the simulation.</p>
+                  <p className="mt-1.5 text-xs text-muted">
+                    What's been happening? Have you addressed this before? What's at stake? The more specific you are, the more realistic
+                    the simulation.
+                  </p>
                 </div>
               </div>
             </Card>
 
             <Card className="p-5">
               <h2 className="mb-1 font-serif text-xl text-ink">How {simulatedName.trim() || "they"} will show up</h2>
-              <p className="mb-5 text-xs text-muted">Response style shapes emotional tone, with or without an assessment. Difficulty shapes how hard you have to work.</p>
+              <p className="mb-5 text-xs text-muted">
+                Response style shapes emotional tone, with or without an assessment. Difficulty shapes how hard you have to work.
+              </p>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
@@ -282,7 +312,13 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <input type="radio" name="style" className="accent-brand" checked={responseStyle === s.id} onChange={() => setResponseStyle(s.id)} />
+                          <input
+                            type="radio"
+                            name="style"
+                            className="accent-brand"
+                            checked={responseStyle === s.id}
+                            onChange={() => setResponseStyle(s.id)}
+                          />
                           <span className="text-sm font-semibold text-ink">{s.label}</span>
                         </div>
                         <p className="mt-1 pl-6 text-xs leading-relaxed text-muted">{s.description}</p>
@@ -302,7 +338,13 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <input type="radio" name="difficulty" className="accent-brand" checked={difficulty === d.id} onChange={() => setDifficulty(d.id)} />
+                          <input
+                            type="radio"
+                            name="difficulty"
+                            className="accent-brand"
+                            checked={difficulty === d.id}
+                            onChange={() => setDifficulty(d.id)}
+                          />
                           <span className="text-sm font-semibold text-ink">{d.label}</span>
                         </div>
                         <p className="mt-1 pl-6 text-xs leading-relaxed text-muted">{d.description}</p>
@@ -318,7 +360,8 @@ export function SetupScreen({ options, starting, startError, initialMode = "text
             <Card className="p-5">
               <h2 className="mb-1 font-serif text-xl text-ink">Assessments</h2>
               <p className="mb-4 text-xs leading-relaxed text-muted">
-                Uploading assessments builds a behaviorally accurate simulation based on real data. Without them, the simulation uses the style you select. Both are optional, and you choose which report is yours and which is theirs.
+                Uploading assessments builds a behaviorally accurate simulation based on real data. Without them, the simulation uses the
+                style you select. Both are optional, and you choose which report is yours and which is theirs.
               </p>
               <div className="space-y-3">
                 {(["user", "simulated"] as const).map((slot) => (

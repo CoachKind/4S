@@ -12,7 +12,12 @@ const FORBIDDEN = new RegExp(["sub", "ordinate"].join(""), "i");
 const LEVELS: RoleLevel[] = [1, 2, 3];
 const STYLES = Object.keys(RESPONSE_STYLES) as ResponseStyle[];
 
-function setupFor(scenario: ScenarioId, userLevel: RoleLevel, simulatedLevel: RoleLevel, responseStyle: ResponseStyle = "defensive"): SessionSetup {
+function setupFor(
+  scenario: ScenarioId,
+  userLevel: RoleLevel,
+  simulatedLevel: RoleLevel,
+  responseStyle: ResponseStyle = "defensive",
+): SessionSetup {
   return SessionSetupSchema.parse({
     userRole: { level: userLevel },
     simulatedRole: { level: simulatedLevel },

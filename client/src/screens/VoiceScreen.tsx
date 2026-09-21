@@ -86,7 +86,16 @@ function VoiceCircle({ state, onTap }: { state: VoiceState; onTap: () => void })
         {state === "processing" || state === "connecting" ? (
           <span className="h-8 w-8 animate-spin rounded-full border-2 border-dim border-t-muted" aria-hidden />
         ) : (
-          <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg
+            viewBox="0 0 24 24"
+            className="h-12 w-12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
             <rect x="9" y="3" width="6" height="11" rx="3" />
             <path d="M5 11a7 7 0 0 0 14 0" />
             <path d="M12 18v3" />
@@ -232,7 +241,10 @@ export function VoiceScreen({ session, options, onDebriefed, onSwitchToText, onM
           <div className="min-w-0">
             <div className="text-sm text-ink">
               <span className="font-semibold">{dynamicSentence(setup.userRole.level, setup.simulatedRole.level)}</span>
-              <span className="text-muted"> · {setup.scenario.title} · {otherName}</span>
+              <span className="text-muted">
+                {" "}
+                · {setup.scenario.title} · {otherName}
+              </span>
             </div>
             {setup.situationContext && (
               <p className="mt-0.5 truncate text-xs text-muted" title={setup.situationContext}>
@@ -294,9 +306,7 @@ export function VoiceScreen({ session, options, onDebriefed, onSwitchToText, onM
 
             <div className="flex-1 overflow-y-auto border-t border-surface-3">
               <div className="mx-auto max-w-4xl space-y-5 px-5 py-6">
-                {transcript.length === 0 && (
-                  <p className="text-center text-xs text-dim">The transcript will appear here as you talk.</p>
-                )}
+                {transcript.length === 0 && <p className="text-center text-xs text-dim">The transcript will appear here as you talk.</p>}
                 {transcript.map((m) => (
                   <Bubble key={m.id} message={m} otherName={otherName} />
                 ))}

@@ -73,7 +73,10 @@ test("voice instructions are the persona prompt plus the spoken addition", () =>
 });
 
 test("debrief system prompt carries the voice line only in voice mode", () => {
-  assert.match(buildDebriefSystemPrompt(setup, "voice"), new RegExp(VOICE_DEBRIEF_LINE.slice(0, 40).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(
+    buildDebriefSystemPrompt(setup, "voice"),
+    new RegExp(VOICE_DEBRIEF_LINE.slice(0, 40).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
   assert.doesNotMatch(buildDebriefSystemPrompt(setup, "text"), /voice mode/);
   assert.doesNotMatch(buildDebriefSystemPrompt(setup), /voice mode/);
 });
@@ -85,7 +88,11 @@ test("transcript accumulator orders turns by item creation, not by text arrival"
   // The reply's transcript lands before the user's transcription completes.
   const reply = acc.handle({ type: "response.output_audio_transcript.done", item_id: "a1", transcript: "Which report?" });
   assert.equal(reply?.role, "simulated");
-  const spoken = acc.handle({ type: "conversation.item.input_audio_transcription.completed", item_id: "u1", transcript: "The Friday report." });
+  const spoken = acc.handle({
+    type: "conversation.item.input_audio_transcription.completed",
+    item_id: "u1",
+    transcript: "The Friday report.",
+  });
   assert.equal(spoken?.role, "user");
   assert.deepEqual(
     acc.messages().map((m) => [m.role, m.content]),
@@ -197,7 +204,10 @@ test("reconnecting carries the prior transcript and keeps order", async () => {
     await new Promise((r) => ws2.once("close", r));
     await new Promise((r) => setTimeout(r, 50));
     const saved = await getSession(session.id);
-    assert.deepEqual(saved.transcript.map((m) => m.role), ["user", "simulated", "user", "simulated"]);
+    assert.deepEqual(
+      saved.transcript.map((m) => m.role),
+      ["user", "simulated", "user", "simulated"],
+    );
   });
 });
 
@@ -213,17 +223,28 @@ test("session.update takes the GA shape with the configured models and voice", (
   assert.equal(audio.output.voice, "alloy");
   assert.match(String(ga.session.instructions), /You are Marcus/);
   assert.match(String(ga.session.instructions), /spoken conversation/);
-  for (const legacy of ["modalities", "voice", "input_audio_format", "output_audio_format", "input_audio_transcription", "turn_detection"]) {
+  for (const legacy of [
+    "modalities",
+    "voice",
+    "input_audio_format",
+    "output_audio_format",
+    "input_audio_transcription",
+    "turn_detection",
+  ]) {
     assert.ok(!(legacy in ga.session), `GA session must not carry the beta field ${legacy}`);
   }
 });
 
 test("seed items match the GA item schema", () => {
-  const user = buildSeedItem({ id: "x", role: "user", content: "hi", createdAt: "" }, 0) as { item: { id: string; role: string; content: Array<{ type: string; text: string }> } };
+  const user = buildSeedItem({ id: "x", role: "user", content: "hi", createdAt: "" }, 0) as {
+    item: { id: string; role: string; content: Array<{ type: string; text: string }> };
+  };
   assert.equal(user.item.id, "seed_0");
   assert.equal(user.item.role, "user");
   assert.deepEqual(user.item.content, [{ type: "input_text", text: "hi" }]);
-  const assistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1) as { item: { role: string; content: Array<{ type: string; text: string }> } };
+  const assistant = buildSeedItem({ id: "y", role: "simulated", content: "hey", createdAt: "" }, 1) as {
+    item: { role: string; content: Array<{ type: string; text: string }> };
+  };
   assert.equal(assistant.item.role, "assistant");
   assert.deepEqual(assistant.item.content, [{ type: "output_text", text: "hey" }]);
 });
@@ -232,9 +253,15 @@ test("transcript accumulator understands GA item and transcript event names", ()
   const acc = new TranscriptAccumulator();
   assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "u1", type: "message", role: "user" } }), null);
   assert.equal(acc.handle({ type: "conversation.item.added", item: { id: "a1", type: "message", role: "assistant" } }), null);
-  assert.equal(acc.handle({ type: "response.output_audio_transcript.done", item_id: "a1", transcript: "Which report?" })?.role, "simulated");
+  assert.equal(
+    acc.handle({ type: "response.output_audio_transcript.done", item_id: "a1", transcript: "Which report?" })?.role,
+    "simulated",
+  );
   assert.equal(acc.handle({ type: "conversation.item.done", item: { id: "a1", type: "message", role: "assistant" } }), null);
-  assert.equal(acc.handle({ type: "conversation.item.input_audio_transcription.completed", item_id: "u1", transcript: "The Friday one." })?.role, "user");
+  assert.equal(
+    acc.handle({ type: "conversation.item.input_audio_transcription.completed", item_id: "u1", transcript: "The Friday one." })?.role,
+    "user",
+  );
   assert.deepEqual(
     acc.messages().map((m) => [m.role, m.content]),
     [
@@ -267,7 +294,10 @@ test("relay round trip works on the GA protocol", async () => {
     await new Promise((r) => ws.once("close", r));
     await new Promise((r) => setTimeout(r, 50));
     const saved = await getSession(session.id);
-    assert.deepEqual(saved.transcript.map((m) => m.role), ["user", "simulated"]);
+    assert.deepEqual(
+      saved.transcript.map((m) => m.role),
+      ["user", "simulated"],
+    );
   });
 });
 
@@ -295,7 +325,15 @@ test("no beta event names remain anywhere in the voice code or client", async ()
     "../src/voice/openaiRealtime.ts",
     "../../client/src/lib/voiceClient.ts",
   ];
-  const beta = [/conversation\.item\.created/, /response\.audio\./, /response\.audio_transcript/, /response\.text\./, /realtime=v1/, /input_audio_format/, /gpt-4o-realtime/];
+  const beta = [
+    /conversation\.item\.created/,
+    /response\.audio\./,
+    /response\.audio_transcript/,
+    /response\.text\./,
+    /realtime=v1/,
+    /input_audio_format/,
+    /gpt-4o-realtime/,
+  ];
   for (const f of files) {
     const src = readFileSync(new URL(f, import.meta.url), "utf8");
     for (const pattern of beta) assert.doesNotMatch(src, pattern, `${f} still references ${pattern}`);

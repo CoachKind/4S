@@ -12,10 +12,8 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary:
-    "bg-brand text-base font-semibold hover:bg-brand-soft disabled:bg-surface-3 disabled:text-dim",
-  secondary:
-    "bg-surface-3 text-ink hover:bg-[#444] disabled:bg-surface-2 disabled:text-dim",
+  primary: "bg-brand text-base font-semibold hover:bg-brand-soft disabled:bg-surface-3 disabled:text-dim",
+  secondary: "bg-surface-3 text-ink hover:bg-[#444] disabled:bg-surface-2 disabled:text-dim",
   ghost: "bg-transparent text-muted hover:text-ink hover:bg-surface-2 disabled:text-dim",
   danger: "bg-transparent text-danger border border-danger/40 hover:bg-danger/10 disabled:text-dim",
 };
@@ -54,10 +52,7 @@ export const inputClass =
 
 export function Spinner({ className = "" }: { className?: string }) {
   return (
-    <span
-      className={`inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted/40 border-t-brand ${className}`}
-      aria-hidden
-    />
+    <span className={`inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted/40 border-t-brand ${className}`} aria-hidden />
   );
 }
 
@@ -71,10 +66,7 @@ export function ErrorNote({ children }: { children: ReactNode }) {
 }
 
 export function Tag({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "brand" }) {
-  const cls =
-    tone === "brand"
-      ? "bg-brand/15 text-brand border-brand/30"
-      : "bg-surface-2 text-muted border-surface-3";
+  const cls = tone === "brand" ? "bg-brand/15 text-brand border-brand/30" : "bg-surface-2 text-muted border-surface-3";
   return (
     <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium tracking-wide ${cls}`}>
       {children}

@@ -28,15 +28,15 @@ Remaining from Phases 2–4: session history, shareable debrief, coach dashboard
 
 ## Stack
 
-| Layer | Choice |
-|---|---|
-| Frontend | React 19, Vite, Tailwind CSS v4, TypeScript |
-| Backend | Node 20+, Express 5, TypeScript |
-| AI | Anthropic Claude API via `@anthropic-ai/sdk`. `claude-sonnet-5` for extraction and simulation, `claude-opus-5` for the debrief |
-| Voice | OpenAI Realtime API (GA) over a raw WebSocket (`ws`), relayed by the server. `gpt-realtime-2.1`, voice `alloy`, transcription `gpt-4o-mini-transcribe` by default |
-| PDF parsing | Claude document input (base64 PDF) with structured JSON output |
-| Storage | Supabase (`sessions` table) when configured, otherwise in-memory |
-| Hosting | Vercel (client), Railway (server) |
+| Layer       | Choice                                                                                                                                                            |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend    | React 19, Vite, Tailwind CSS v4, TypeScript                                                                                                                       |
+| Backend     | Node 20+, Express 5, TypeScript                                                                                                                                   |
+| AI          | Anthropic Claude API via `@anthropic-ai/sdk`. `claude-sonnet-5` for extraction and simulation, `claude-opus-5` for the debrief                                    |
+| Voice       | OpenAI Realtime API (GA) over a raw WebSocket (`ws`), relayed by the server. `gpt-realtime-2.1`, voice `alloy`, transcription `gpt-4o-mini-transcribe` by default |
+| PDF parsing | Claude document input (base64 PDF) with structured JSON output                                                                                                    |
+| Storage     | Supabase (`sessions` table) when configured, otherwise in-memory                                                                                                  |
+| Hosting     | Vercel (client), Railway (server)                                                                                                                                 |
 
 API keys live only on the server.
 
@@ -89,43 +89,43 @@ npm run build       # both packages
 
 See `.env.example`. The server reads `server/.env` (or the process environment).
 
-| Variable | Required | Notes |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | yes | Server only |
-| `PORT` | no | Default 3001 |
-| `SIMULATION_MODEL`, `EXTRACTION_MODEL`, `DEBRIEF_MODEL`, `EQ_PREP_MODEL` | no | Defaults: `claude-sonnet-5`, `claude-sonnet-5`, `claude-opus-5`, `claude-opus-5` |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | no | Both set → sessions persist to Supabase. Otherwise in-memory |
-| `CORS_ORIGINS` | no | Comma-separated browser origins. Default `http://localhost:5173` |
-| `OPENAI_API_KEY` | for voice | Server only. Without it, voice connections are refused with 503 and text mode keeps working |
-| `OPENAI_VOICE` | no | Default `alloy` |
-| `OPENAI_REALTIME_MODEL`, `OPENAI_TRANSCRIPTION_MODEL`, `OPENAI_REALTIME_URL` | no | Defaults `gpt-realtime-2.1`, `gpt-4o-mini-transcribe`, `wss://api.openai.com/v1/realtime` |
-| `MOCK_AI` | no | `1` enables canned AI responses and the mock voice relay (dev only) |
-| `VITE_API_BASE_URL` | no | Client build-time. Leave unset in dev; set to the Railway URL in production |
+| Variable                                                                     | Required  | Notes                                                                                       |
+| ---------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                                                          | yes       | Server only                                                                                 |
+| `PORT`                                                                       | no        | Default 3001                                                                                |
+| `SIMULATION_MODEL`, `EXTRACTION_MODEL`, `DEBRIEF_MODEL`, `EQ_PREP_MODEL`     | no        | Defaults: `claude-sonnet-5`, `claude-sonnet-5`, `claude-opus-5`, `claude-opus-5`            |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                                  | no        | Both set → sessions persist to Supabase. Otherwise in-memory                                |
+| `CORS_ORIGINS`                                                               | no        | Comma-separated browser origins. Default `http://localhost:5173`                            |
+| `OPENAI_API_KEY`                                                             | for voice | Server only. Without it, voice connections are refused with 503 and text mode keeps working |
+| `OPENAI_VOICE`                                                               | no        | Default `alloy`                                                                             |
+| `OPENAI_REALTIME_MODEL`, `OPENAI_TRANSCRIPTION_MODEL`, `OPENAI_REALTIME_URL` | no        | Defaults `gpt-realtime-2.1`, `gpt-4o-mini-transcribe`, `wss://api.openai.com/v1/realtime`   |
+| `MOCK_AI`                                                                    | no        | `1` enables canned AI responses and the mock voice relay (dev only)                         |
+| `VITE_API_BASE_URL`                                                          | no        | Client build-time. Leave unset in dev; set to the Railway URL in production                 |
 
 ## API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/health` | Liveness, store kind, model config |
-| `GET` | `/api/meta/options` | Scenario, response style, and difficulty option lists |
-| `POST` | `/api/assessments/extract` | multipart `file` (PDF) → `{ assessment }` |
-| `POST` | `/api/sessions` | Setup JSON (with confirmed assessments) → `{ session }` |
-| `GET` | `/api/sessions/:id` | Fetch a session |
-| `POST` | `/api/sessions/:id/messages` | `{ content }` → `{ leader, manager }` (the manager's reply) |
-| `POST` | `/api/sessions/:id/debrief` | Ends the conversation and returns the session with `debrief` |
-| `POST` | `/api/eq-prep` | `{ feeling }` → streamed plain-text EQ prep. Stateless; see Privacy below |
-| `POST` | `/api/sessions/:id/mode` | `{ mode: "text" \| "voice" }` → switches an active session; the transcript carries over |
-| `WS` | `/voice/:id/connect` | Voice relay. Rejects with 404 (no session), 409 (debriefed), 403 (origin), 503 (no key) before upgrading |
+| Method | Path                         | Purpose                                                                                                  |
+| ------ | ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/health`                | Liveness, store kind, model config                                                                       |
+| `GET`  | `/api/meta/options`          | Scenario, response style, and difficulty option lists                                                    |
+| `POST` | `/api/assessments/extract`   | multipart `file` (PDF) → `{ assessment }`                                                                |
+| `POST` | `/api/sessions`              | Setup JSON (with confirmed assessments) → `{ session }`                                                  |
+| `GET`  | `/api/sessions/:id`          | Fetch a session                                                                                          |
+| `POST` | `/api/sessions/:id/messages` | `{ content }` → `{ leader, manager }` (the manager's reply)                                              |
+| `POST` | `/api/sessions/:id/debrief`  | Ends the conversation and returns the session with `debrief`                                             |
+| `POST` | `/api/eq-prep`               | `{ feeling }` → streamed plain-text EQ prep. Stateless; see Privacy below                                |
+| `POST` | `/api/sessions/:id/mode`     | `{ mode: "text" \| "voice" }` → switches an active session; the transcript carries over                  |
+| `WS`   | `/voice/:id/connect`         | Voice relay. Rejects with 404 (no session), 409 (debriefed), 403 (origin), 503 (no key) before upgrading |
 
 ## Role Dynamic System
 
-The setup screen asks two questions before anything else: *You are a…* and *You are speaking with a…*, each one of three levels.
+The setup screen asks two questions before anything else: _You are a…_ and _You are speaking with a…_, each one of three levels.
 
-| Level | Label | Short |
-|---|---|---|
-| 1 | Senior Leader / Executive | Senior Leader |
-| 2 | Manager | Manager |
-| 3 | Lead / Individual Contributor | Individual Contributor |
+| Level | Label                         | Short                  |
+| ----- | ----------------------------- | ---------------------- |
+| 1     | Senior Leader / Executive     | Senior Leader          |
+| 2     | Manager                       | Manager                |
+| 3     | Lead / Individual Contributor | Individual Contributor |
 
 The direction is derived, never chosen: a lower level number than the other person is **downward**, a higher number is **upward**, the same number is **lateral**. The session stores `userRole`, `simulatedRole` (each `{ level, label }`) and `conversationDirection` inside `setup`. The server fills in labels and direction itself and ignores any client-sent values for them.
 
@@ -150,12 +150,12 @@ Four scenarios, each available across every role dynamic. They are defined in on
 - how the simulated person behaves, per direction and response style (the persona's "HOW YOU BEHAVE IN THIS CONVERSATION" block)
 - a debrief lens, injected into the debrief system prompt as "SCENARIO LENS"
 
-| Scenario | Downward | Upward | Lateral |
-|---|---|---|---|
-| Hard Feedback | Unchanged from Phase 1 | The senior person is not used to feedback from this direction | Peers with their own turf |
-| Accountability | Excuse ready, pivots to now, hides the pattern | Dismissive: "let's not dwell on what didn't happen" | Feels called out, gets territorial |
-| Re-engagement | "I'm fine", real reason surfaces only with safety | The user is the one who has pulled back; the senior reacts by style | Less formal, more personal |
-| Low Motivation | Surprised it is visible; real cause underneath | The user is running on empty; the senior supports, solves, or dismisses | Delicate; not officially their lane |
+| Scenario       | Downward                                          | Upward                                                                  | Lateral                             |
+| -------------- | ------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------- |
+| Hard Feedback  | Unchanged from Phase 1                            | The senior person is not used to feedback from this direction           | Peers with their own turf           |
+| Accountability | Excuse ready, pivots to now, hides the pattern    | Dismissive: "let's not dwell on what didn't happen"                     | Feels called out, gets territorial  |
+| Re-engagement  | "I'm fine", real reason surfaces only with safety | The user is the one who has pulled back; the senior reacts by style     | Less formal, more personal          |
+| Low Motivation | Surprised it is visible; real cause underneath    | The user is running on empty; the senior supports, solves, or dismisses | Delicate; not officially their lane |
 
 The session stores the scenario as an object: `{ id, label, description, title }`, with `title` already rendered for the dynamic. Clients send just the id.
 

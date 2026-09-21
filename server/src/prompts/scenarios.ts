@@ -103,9 +103,12 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
         "HOW YOU BEHAVE IN THIS CONVERSATION. You have an excuse ready: circumstances, workload, competing priorities. You may partially acknowledge the miss, but you pivot quickly to what you are doing now. You do not volunteer that this is a pattern. If {{USER}} pushes on the pattern, you get more defensive or more emotional, depending on your style.",
       );
       const byStyle: Record<ResponseStyle, string> = {
-        agreeable: "Your style here: you over-commit again in the moment to end the discomfort. New date, new promise, no real change in how you will get there.",
-        defensive: "Your style here: you challenge whether the deadline was realistic in the first place, and whether {{USER}} understood what was on your plate.",
-        deflecting: "Your style here: you point to external factors and other people. The inputs were late, the priorities shifted, someone else dropped the ball first.",
+        agreeable:
+          "Your style here: you over-commit again in the moment to end the discomfort. New date, new promise, no real change in how you will get there.",
+        defensive:
+          "Your style here: you challenge whether the deadline was realistic in the first place, and whether {{USER}} understood what was on your plate.",
+        deflecting:
+          "Your style here: you point to external factors and other people. The inputs were late, the priorities shifted, someone else dropped the ball first.",
         emotional: "Your style here: you take this as a sign you are not trusted. That stings more than the miss itself, and it shows.",
       };
       lines.push(byStyle[style]);
@@ -127,7 +130,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
   reengagement: {
     id: "reengagement",
     label: "Re-engagement Conversation",
-    description: "Something changed. They've pulled back, gone quiet, or stopped bringing the energy they used to. You need to get to the root of it.",
+    description:
+      "Something changed. They've pulled back, gone quiet, or stopped bringing the energy they used to. You need to get to the root of it.",
     placeholder:
       "e.g. For the last month she's been doing the minimum. She used to be one of my most engaged people. She hasn't said anything is wrong but something clearly is.",
     baseTitle: "Getting to the root of disengagement",
@@ -178,10 +182,14 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
         "HOW YOU BEHAVE IN THIS CONVERSATION. You initially deflect with 'I'm fine' or 'just been busy'. There is a real reason underneath that takes skill to surface: you feel overlooked, or you have a conflict with a peer, or you disagree with a decision, or something personal is bleeding into work, or you are genuinely burned out. Pick one, keep it consistent, and do not volunteer it early. {{USER}} has to create safety first: genuine curiosity, patience, no rush to fix.",
       );
       const byStyle: Record<ResponseStyle, string> = {
-        emotional: "Your style here: you may eventually open up, but only if the conversation feels genuinely safe. If it does, it comes out with real feeling. If it does not, you go quieter.",
-        defensive: "Your style here: you interpret the check-in as performance management and clam up. 'Is there a problem with my work?' You need {{USER}} to make clear this is not that before you give anything real.",
-        deflecting: "Your style here: you stay surface level and redirect to work topics. Status updates, next steps, anything but how you are actually doing.",
-        agreeable: "Your style here: you say everything is fine even when it is not. You smile, you reassure, you thank them for asking. A skilled person will notice the gap between what you say and how you have been showing up.",
+        emotional:
+          "Your style here: you may eventually open up, but only if the conversation feels genuinely safe. If it does, it comes out with real feeling. If it does not, you go quieter.",
+        defensive:
+          "Your style here: you interpret the check-in as performance management and clam up. 'Is there a problem with my work?' You need {{USER}} to make clear this is not that before you give anything real.",
+        deflecting:
+          "Your style here: you stay surface level and redirect to work topics. Status updates, next steps, anything but how you are actually doing.",
+        agreeable:
+          "Your style here: you say everything is fine even when it is not. You smile, you reassure, you thank them for asking. A skilled person will notice the gap between what you say and how you have been showing up.",
       };
       lines.push(byStyle[style]);
       if (direction === "lateral") {
@@ -249,10 +257,14 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
         "HOW YOU BEHAVE IN THIS CONVERSATION. You are surprised the conversation is happening; you did not realize it was that visible. You may not fully understand what is driving the low output yourself. Underneath it is one of: burnout, feeling disconnected from purpose, personal circumstances, or feeling undervalued. Pick one, keep it consistent, and let it surface only if {{USER}} makes room for it.",
       );
       const byStyle: Record<ResponseStyle, string> = {
-        defensive: "Your style here: you dispute the characterization. You cite effort over output: the hours you have put in, the things that are not being counted, the context {{USER}} is missing.",
-        deflecting: "Your style here: you point to external blockers, team issues, and resource gaps. The output is down because of things outside your control, and you have the list ready.",
-        emotional: "Your style here: you become visibly stressed. You may worry out loud about your job security and ask whether this is a formal thing. {{USER}} has to keep it a coaching conversation while being honest.",
-        agreeable: "Your style here: you over-agree. You promise to do better immediately, without understanding what needs to change or what is actually driving it. A skilled person will notice that nothing has been understood.",
+        defensive:
+          "Your style here: you dispute the characterization. You cite effort over output: the hours you have put in, the things that are not being counted, the context {{USER}} is missing.",
+        deflecting:
+          "Your style here: you point to external blockers, team issues, and resource gaps. The output is down because of things outside your control, and you have the list ready.",
+        emotional:
+          "Your style here: you become visibly stressed. You may worry out loud about your job security and ask whether this is a formal thing. {{USER}} has to keep it a coaching conversation while being honest.",
+        agreeable:
+          "Your style here: you over-agree. You promise to do better immediately, without understanding what needs to change or what is actually driving it. A skilled person will notice that nothing has been understood.",
       };
       lines.push(byStyle[style]);
       if (direction === "lateral") {

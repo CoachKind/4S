@@ -69,10 +69,7 @@ export const api = {
   },
 
   sendMessage: (id: string, content: string) =>
-    request<{ user: TranscriptMessage; simulated: TranscriptMessage }>(
-      `/sessions/${id}/messages`,
-      json("POST", { content }),
-    ),
+    request<{ user: TranscriptMessage; simulated: TranscriptMessage }>(`/sessions/${id}/messages`, json("POST", { content })),
 
   setMode: async (id: string, mode: SessionMode): Promise<Session> => {
     const { session } = await request<{ session: Session }>(`/sessions/${id}/mode`, json("POST", { mode }));

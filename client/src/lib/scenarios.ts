@@ -22,7 +22,8 @@ export const SCENARIO_CARDS: SetupOptions["scenarios"] = [
   {
     id: "reengagement",
     label: "Re-engagement Conversation",
-    description: "Something changed. They've pulled back, gone quiet, or stopped bringing the energy they used to. You need to get to the root of it.",
+    description:
+      "Something changed. They've pulled back, gone quiet, or stopped bringing the energy they used to. You need to get to the root of it.",
     placeholder:
       "e.g. For the last month she's been doing the minimum. She used to be one of my most engaged people. She hasn't said anything is wrong but something clearly is.",
     title: "Getting to the root of disengagement",

@@ -2,9 +2,24 @@
 import type { ConversationDirection, RoleLevel } from "./types";
 
 export const ROLE_LEVELS: Record<RoleLevel, { level: RoleLevel; label: string; short: string; description: string }> = {
-  1: { level: 1, label: "Senior Leader / Executive", short: "Senior Leader", description: "Carries organizational authority. Used to being deferred to." },
-  2: { level: 2, label: "Manager", short: "Manager", description: "Mid-level. Leads a team or other managers. Caught between leadership and their people." },
-  3: { level: 3, label: "Lead / Individual Contributor", short: "Individual Contributor", description: "Early in the leadership journey or no formal direct reports. Less institutional authority." },
+  1: {
+    level: 1,
+    label: "Senior Leader / Executive",
+    short: "Senior Leader",
+    description: "Carries organizational authority. Used to being deferred to.",
+  },
+  2: {
+    level: 2,
+    label: "Manager",
+    short: "Manager",
+    description: "Mid-level. Leads a team or other managers. Caught between leadership and their people.",
+  },
+  3: {
+    level: 3,
+    label: "Lead / Individual Contributor",
+    short: "Individual Contributor",
+    description: "Early in the leadership journey or no formal direct reports. Less institutional authority.",
+  },
 };
 
 export function conversationDirection(userLevel: RoleLevel, simulatedLevel: RoleLevel): ConversationDirection {
@@ -20,8 +35,10 @@ export const DIRECTION_LABELS: Record<ConversationDirection, string> = {
 };
 
 export const CHECKIN_SUBTITLES: Record<ConversationDirection, string> = {
-  downward: "The way you feel about this conversation affects how you show up in it. Take a moment to check in with yourself before you start.",
-  upward: "Speaking up to someone senior takes courage. How you feel going in matters. Take a moment to check in with yourself before you start.",
+  downward:
+    "The way you feel about this conversation affects how you show up in it. Take a moment to check in with yourself before you start.",
+  upward:
+    "Speaking up to someone senior takes courage. How you feel going in matters. Take a moment to check in with yourself before you start.",
   lateral: "Peer conversations can be surprisingly hard. Take a moment before you start.",
 };
 

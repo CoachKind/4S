@@ -79,7 +79,10 @@ export function AssessmentUpload({ slot, otherTerm, assessment, busy, error, can
         <div className="space-y-3">
           <div className="text-sm">
             <span className="text-ink">{assessment.name || "Unnamed"}</span>
-            <span className="text-muted"> · Natural DISC {assessment.disc.natural.D}/{assessment.disc.natural.I}/{assessment.disc.natural.S}/{assessment.disc.natural.C}</span>
+            <span className="text-muted">
+              {" "}
+              · Natural DISC {assessment.disc.natural.D}/{assessment.disc.natural.I}/{assessment.disc.natural.S}/{assessment.disc.natural.C}
+            </span>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={onReview}>

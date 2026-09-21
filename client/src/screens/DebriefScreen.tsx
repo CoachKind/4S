@@ -75,7 +75,11 @@ export function DebriefScreen({ session, options, onRestart }: Props) {
             <Tag>{setup.scenario.title}</Tag>
             <Tag>{styleLabel(options, setup.responseStyle)}</Tag>
             <Tag>{difficultyLabel(options, setup.difficulty)}</Tag>
-            {loaded.length > 0 ? <Tag tone="brand">{loaded.length > 1 ? "Both assessments" : `${loaded[0]} assessment`} loaded</Tag> : <Tag>General coaching · no assessments</Tag>}
+            {loaded.length > 0 ? (
+              <Tag tone="brand">{loaded.length > 1 ? "Both assessments" : `${loaded[0]} assessment`} loaded</Tag>
+            ) : (
+              <Tag>General coaching · no assessments</Tag>
+            )}
           </div>
         </div>
 

@@ -57,7 +57,8 @@ export class VoiceClient {
     await new Promise<void>((resolve, reject) => {
       ws.onopen = () => resolve();
       ws.onerror = () => reject(new Error("Could not reach the voice relay."));
-      ws.onclose = (e) => reject(new Error(e.code === 1006 ? "Voice mode is not available right now." : e.reason || "Voice connection closed."));
+      ws.onclose = (e) =>
+        reject(new Error(e.code === 1006 ? "Voice mode is not available right now." : e.reason || "Voice connection closed."));
     });
 
     ws.onerror = null;

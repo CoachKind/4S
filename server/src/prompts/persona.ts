@@ -71,14 +71,12 @@ const DRIVING_FORCE_PATTERNS: Array<{ match: RegExp; when: "high" | "low"; promp
   {
     match: /resourceful/i,
     when: "low",
-    prompt:
-      "Low Resourceful: you will not engage with data or ROI-style logical arguments. You respond to feeling over evidence.",
+    prompt: "Low Resourceful: you will not engage with data or ROI-style logical arguments. You respond to feeling over evidence.",
   },
   {
     match: /intellectual/i,
     when: "low",
-    prompt:
-      "Low Intellectual: you are not moved by analysis or frameworks. If {{USER}} gets abstract or theoretical, you disengage.",
+    prompt: "Low Intellectual: you are not moved by analysis or frameworks. If {{USER}} gets abstract or theoretical, you disengage.",
   },
 ];
 
@@ -102,9 +100,7 @@ const COMPETENCY_GAP_PATTERNS: Array<{ match: RegExp; prompt: string }> = [
 ];
 
 export function describeDisc(scores: DiscScores): string {
-  return (Object.keys(scores) as Array<keyof DiscScores>)
-    .map((k) => `${k} (${DISC_LABELS[k]}) ${Math.round(scores[k])}`)
-    .join(", ");
+  return (Object.keys(scores) as Array<keyof DiscScores>).map((k) => `${k} (${DISC_LABELS[k]}) ${Math.round(scores[k])}`).join(", ");
 }
 
 function discPatterns(scores: DiscScores): string[] {
@@ -156,9 +152,7 @@ export function buildAssessmentProfile(a: Assessment, name: string): string {
 
   const primary = a.driving_forces.primary.map((f) => `${f.name} (${Math.round(f.score)})`).join(", ");
   const indifferent = a.driving_forces.indifferent.map((f) => `${f.name} (${Math.round(f.score)})`).join(", ");
-  parts.push(
-    `Primary driving forces: ${primary || "none listed"}.\nIndifferent driving forces: ${indifferent || "none listed"}.`,
-  );
+  parts.push(`Primary driving forces: ${primary || "none listed"}.\nIndifferent driving forces: ${indifferent || "none listed"}.`);
   const forces = drivingForcePatterns(a);
   if (forces.length) parts.push("What you are protecting in this conversation:\n" + bulletList(forces));
 

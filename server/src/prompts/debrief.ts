@@ -28,9 +28,13 @@ export function buildDebriefSystemPrompt(setup: SessionSetup, mode: SessionMode 
 ${DIRECTION_FOCUS[direction]}
 
 SCENARIO LENS (${scenario.label}): ${scenario.debriefLens} Let these questions shape What Landed, What to Sharpen, and The Coaching Moment.
-${mode === "voice" ? `
+${
+  mode === "voice"
+    ? `
 ${VOICE_DEBRIEF_LINE}
-` : ""}
+`
+    : ""
+}
 Your debrief has four sections. Write each as short, plain-language paragraphs.
 
 WHAT LANDED: Begin this section with exactly this sentence, word for word: "${DIRECTION_DEBRIEF_SENTENCE[direction]}" Then give specific moments where the user handled the conversation well. Concrete, not generic. Quote or closely paraphrase what the user actually said and explain why it worked.
@@ -71,12 +75,9 @@ function assessmentSummary(label: string, a: Assessment): string {
   );
   if (a.competencies.top_5.length) lines.push(`Top competencies: ${a.competencies.top_5.join(", ")}`);
   if (a.competencies.bottom_5.length) lines.push(`Lowest competencies: ${a.competencies.bottom_5.join(", ")}`);
-  if (a.behavioral_flags.under_pressure.length)
-    lines.push(`Under pressure: ${a.behavioral_flags.under_pressure.join("; ")}`);
-  if (a.behavioral_flags.communication_do.length)
-    lines.push(`Communication do: ${a.behavioral_flags.communication_do.join("; ")}`);
-  if (a.behavioral_flags.communication_dont.length)
-    lines.push(`Communication don't: ${a.behavioral_flags.communication_dont.join("; ")}`);
+  if (a.behavioral_flags.under_pressure.length) lines.push(`Under pressure: ${a.behavioral_flags.under_pressure.join("; ")}`);
+  if (a.behavioral_flags.communication_do.length) lines.push(`Communication do: ${a.behavioral_flags.communication_do.join("; ")}`);
+  if (a.behavioral_flags.communication_dont.length) lines.push(`Communication don't: ${a.behavioral_flags.communication_dont.join("; ")}`);
   if (a.behavioral_flags.areas_for_improvement.length)
     lines.push(`Areas for improvement: ${a.behavioral_flags.areas_for_improvement.join("; ")}`);
   return lines.join("\n");
@@ -84,9 +85,7 @@ function assessmentSummary(label: string, a: Assessment): string {
 
 export function formatTranscript(transcript: TranscriptMessage[], simulatedName: string): string {
   if (transcript.length === 0) return "(The user ended the session before saying anything.)";
-  return transcript
-    .map((m) => `${m.role === "user" ? "USER" : simulatedName.toUpperCase()}: ${m.content}`)
-    .join("\n\n");
+  return transcript.map((m) => `${m.role === "user" ? "USER" : simulatedName.toUpperCase()}: ${m.content}`).join("\n\n");
 }
 
 export function buildDebriefUserPrompt(setup: SessionSetup, transcript: TranscriptMessage[]): string {

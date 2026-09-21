@@ -27,7 +27,10 @@ export function App() {
   const [setupMode, setSetupMode] = useState<SessionMode>("text");
 
   useEffect(() => {
-    api.options().then(setOptions).catch(() => undefined);
+    api
+      .options()
+      .then(setOptions)
+      .catch(() => undefined);
   }, []);
 
   async function start(setup: SessionSetupInput) {
@@ -56,7 +59,9 @@ export function App() {
 
   switch (phase.name) {
     case "setup":
-      return <SetupScreen key={setupKey} options={options} starting={starting} startError={startError} initialMode={setupMode} onStart={start} />;
+      return (
+        <SetupScreen key={setupKey} options={options} starting={starting} startError={startError} initialMode={setupMode} onStart={start} />
+      );
     case "checkin":
       return (
         <EmotionalCheckInScreen

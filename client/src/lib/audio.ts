@@ -84,11 +84,7 @@ export interface CaptureHandle {
 }
 
 /** Starts microphone capture. Calls onChunk with base64 PCM16 frames until stopped. */
-export async function startCapture(
-  ctx: AudioContext,
-  stream: MediaStream,
-  onChunk: (base64: string) => void,
-): Promise<CaptureHandle> {
+export async function startCapture(ctx: AudioContext, stream: MediaStream, onChunk: (base64: string) => void): Promise<CaptureHandle> {
   const blob = new Blob([CAPTURE_WORKLET], { type: "application/javascript" });
   const url = URL.createObjectURL(blob);
   try {

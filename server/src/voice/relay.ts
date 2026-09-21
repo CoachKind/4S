@@ -161,9 +161,11 @@ export function runRelay(browser: WebSocket, session: Session): void {
 
   const persist = () => {
     const messages = transcript.messages();
-    saving = saving.then(() => replaceTranscript(session.id, messages)).catch((err) => {
-      console.error("voice: transcript save failed", err instanceof Error ? err.message : err);
-    });
+    saving = saving
+      .then(() => replaceTranscript(session.id, messages))
+      .catch((err) => {
+        console.error("voice: transcript save failed", err instanceof Error ? err.message : err);
+      });
     return saving;
   };
 

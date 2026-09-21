@@ -16,7 +16,11 @@ export const MOCK_ASSESSMENT: Assessment = {
   driving_forces: {
     primary: [
       { name: "Commanding", score: 74, descriptor: "Driven by status, recognition and control over personal freedom." },
-      { name: "Instinctive", score: 66, descriptor: "Driven by utilizing past experience, intuition and seeking specific knowledge when necessary." },
+      {
+        name: "Instinctive",
+        score: 66,
+        descriptor: "Driven by utilizing past experience, intuition and seeking specific knowledge when necessary.",
+      },
       { name: "Objective", score: 62, descriptor: "Driven by the functionality and objectivity of their surroundings." },
       { name: "Intentional", score: 55, descriptor: "Driven to assist others for a specific purpose." },
     ],
@@ -36,7 +40,11 @@ export const MOCK_ASSESSMENT: Assessment = {
   behavioral_flags: {
     under_pressure: ["Becomes blunt and impatient.", "Takes charge without consulting others.", "Pushes for a quick decision."],
     communication_do: ["Be brief and to the point.", "Provide facts and figures.", "Present options with probabilities of success."],
-    communication_dont: ["Don't ramble or waste time.", "Don't be vague about expectations.", "Don't try to build a personal rapport before getting to the point."],
+    communication_dont: [
+      "Don't ramble or waste time.",
+      "Don't be vague about expectations.",
+      "Don't try to build a personal rapport before getting to the point.",
+    ],
     areas_for_improvement: ["May overstep authority.", "Can be dismissive of others' feelings.", "Sets standards too high for the team."],
   },
 };
@@ -57,7 +65,9 @@ export function mockSimulatedReply(_setup: SessionSetup, transcript: TranscriptM
 export function mockDebrief(setup: SessionSetup, transcript: TranscriptMessage[]): Debrief {
   const name = setup.simulatedName;
   const first = transcript.find((m) => m.role === "user")?.content ?? "";
-  const opener = first ? `You opened with "${first.slice(0, 80)}${first.length > 80 ? "…" : ""}", which named the topic without hedging.` : `You ended before saying anything, so there is little to assess yet.`;
+  const opener = first
+    ? `You opened with "${first.slice(0, 80)}${first.length > 80 ? "…" : ""}", which named the topic without hedging.`
+    : `You ended before saying anything, so there is little to assess yet.`;
   return {
     what_landed: `${DIRECTION_DEBRIEF_SENTENCE[setup.conversationDirection]} ${opener} When ${name} asked what this meant for them, you stayed with the substance instead of retreating to reassurance. That kept the conversation about the pattern, not about ${name}'s feelings about the conversation.`,
     what_to_sharpen: setup.userAssessment
